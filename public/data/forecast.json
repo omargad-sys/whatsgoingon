@@ -1,0 +1,645 @@
+{
+  "generated_at": "2026-08-18T00:56:05+00:00",
+  "as_of_month": "2026-08-01",
+  "target_month": "2026-09-01",
+  "lookahead_months": 1,
+  "threshold_quantile": 0.75,
+  "source": "baseline",
+  "backend": "baseline",
+  "evaluation": {
+    "model_roc_auc": 0.9438,
+    "baseline_roc_auc": 0.9289,
+    "margin": 0.0149,
+    "model_brier": 0.0889,
+    "baseline_brier": 0.1517,
+    "calibration_slope": 0.997,
+    "windows": 5,
+    "base_rate": 0.3026
+  },
+  "countries": {
+    "Afghanistan": {
+      "p": 0.142,
+      "fatalities": 157,
+      "events": 212,
+      "threshold": 389.5,
+      "ratio": 0.403,
+      "centroid": [
+        66.0,
+        33.9,
+        3.0
+      ]
+    },
+    "Algeria": {
+      "p": 0.0993,
+      "fatalities": 240,
+      "events": 402,
+      "threshold": 851.2,
+      "ratio": 0.282,
+      "centroid": [
+        2.6,
+        28.0,
+        6.0
+      ]
+    },
+    "Angola": {
+      "p": 0.1901,
+      "fatalities": 189,
+      "events": 341,
+      "threshold": 350.2,
+      "ratio": 0.54,
+      "centroid": [
+        17.9,
+        -11.2,
+        4.5
+      ]
+    },
+    "Armenia": {
+      "p": 0.2092,
+      "fatalities": 1414,
+      "events": 1110,
+      "threshold": 2381.0,
+      "ratio": 0.594,
+      "centroid": [
+        45.0,
+        40.2,
+        0.8
+      ]
+    },
+    "Azerbaijan": {
+      "p": 0.28,
+      "fatalities": 31,
+      "events": 146,
+      "threshold": 39.0,
+      "ratio": 0.795,
+      "centroid": [
+        47.6,
+        40.4,
+        1.3
+      ]
+    },
+    "Bahrain": {
+      "p": 0.1901,
+      "fatalities": 1012,
+      "events": 1164,
+      "threshold": 1875.5,
+      "ratio": 0.54,
+      "centroid": [
+        50.55,
+        26.05,
+        0.2
+      ]
+    },
+    "Belarus": {
+      "p": 0.1495,
+      "fatalities": 229,
+      "events": 190,
+      "threshold": 539.5,
+      "ratio": 0.424,
+      "centroid": [
+        28.0,
+        53.7,
+        2.0
+      ]
+    },
+    "Brazil": {
+      "p": 0.4336,
+      "fatalities": 468,
+      "events": 316,
+      "threshold": 380.2,
+      "ratio": 1.231,
+      "centroid": [
+        -51.9,
+        -14.2,
+        8.0
+      ]
+    },
+    "Burkina Faso": {
+      "p": 0.5453,
+      "fatalities": 474,
+      "events": 1577,
+      "threshold": 306.2,
+      "ratio": 1.548,
+      "centroid": [
+        -1.6,
+        12.3,
+        2.0
+      ]
+    },
+    "Chad": {
+      "p": 0.2475,
+      "fatalities": 147,
+      "events": 395,
+      "threshold": 209.2,
+      "ratio": 0.703,
+      "centroid": [
+        18.7,
+        15.5,
+        4.5
+      ]
+    },
+    "China": {
+      "p": 0.3171,
+      "fatalities": 99,
+      "events": 174,
+      "threshold": 110.0,
+      "ratio": 0.9,
+      "centroid": [
+        104.0,
+        35.0,
+        12.0
+      ]
+    },
+    "Colombia": {
+      "p": 0.114,
+      "fatalities": 170,
+      "events": 425,
+      "threshold": 525.5,
+      "ratio": 0.324,
+      "centroid": [
+        -74.3,
+        4.6,
+        3.5
+      ]
+    },
+    "Democratic Republic of Congo": {
+      "p": 0.2562,
+      "fatalities": 46,
+      "events": 209,
+      "threshold": 63.2,
+      "ratio": 0.727,
+      "centroid": [
+        23.6,
+        -2.9,
+        5.5
+      ]
+    },
+    "Egypt": {
+      "p": 0.2229,
+      "fatalities": 81,
+      "events": 110,
+      "threshold": 128.0,
+      "ratio": 0.633,
+      "centroid": [
+        30.0,
+        26.8,
+        3.5
+      ]
+    },
+    "Ethiopia": {
+      "p": 0.3695,
+      "fatalities": 59,
+      "events": 92,
+      "threshold": 56.2,
+      "ratio": 1.049,
+      "centroid": [
+        39.6,
+        8.6,
+        3.5
+      ]
+    },
+    "India": {
+      "p": 0.283,
+      "fatalities": 761,
+      "events": 1383,
+      "threshold": 947.5,
+      "ratio": 0.803,
+      "centroid": [
+        79.0,
+        22.0,
+        7.0
+      ]
+    },
+    "Indonesia": {
+      "p": 0.6705,
+      "fatalities": 825,
+      "events": 1274,
+      "threshold": 433.5,
+      "ratio": 1.903,
+      "centroid": [
+        118.0,
+        -2.5,
+        10.0
+      ]
+    },
+    "Iran": {
+      "p": 0.409,
+      "fatalities": 92,
+      "events": 272,
+      "threshold": 79.2,
+      "ratio": 1.161,
+      "centroid": [
+        53.0,
+        32.5,
+        5.0
+      ]
+    },
+    "Iraq": {
+      "p": 0.3224,
+      "fatalities": 113,
+      "events": 140,
+      "threshold": 123.5,
+      "ratio": 0.915,
+      "centroid": [
+        43.7,
+        33.2,
+        2.5
+      ]
+    },
+    "Israel": {
+      "p": 0.1871,
+      "fatalities": 75,
+      "events": 266,
+      "threshold": 141.2,
+      "ratio": 0.531,
+      "centroid": [
+        35.0,
+        31.5,
+        0.9
+      ]
+    },
+    "Jordan": {
+      "p": 0.4861,
+      "fatalities": 119,
+      "events": 269,
+      "threshold": 86.2,
+      "ratio": 1.38,
+      "centroid": [
+        36.5,
+        31.3,
+        1.5
+      ]
+    },
+    "Kazakhstan": {
+      "p": 0.2013,
+      "fatalities": 8,
+      "events": 35,
+      "threshold": 14.0,
+      "ratio": 0.571,
+      "centroid": [
+        68.0,
+        48.0,
+        7.0
+      ]
+    },
+    "Kuwait": {
+      "p": 0.1929,
+      "fatalities": 23,
+      "events": 30,
+      "threshold": 42.0,
+      "ratio": 0.548,
+      "centroid": [
+        47.6,
+        29.3,
+        0.6
+      ]
+    },
+    "Lebanon": {
+      "p": 0.2956,
+      "fatalities": 73,
+      "events": 242,
+      "threshold": 87.0,
+      "ratio": 0.839,
+      "centroid": [
+        35.9,
+        33.9,
+        0.5
+      ]
+    },
+    "Libya": {
+      "p": 0.0881,
+      "fatalities": 9,
+      "events": 129,
+      "threshold": 36.0,
+      "ratio": 0.25,
+      "centroid": [
+        17.5,
+        27.0,
+        5.0
+      ]
+    },
+    "Mali": {
+      "p": 0.1331,
+      "fatalities": 22,
+      "events": 40,
+      "threshold": 58.2,
+      "ratio": 0.378,
+      "centroid": [
+        -3.5,
+        17.5,
+        4.5
+      ]
+    },
+    "Mexico": {
+      "p": 0.2928,
+      "fatalities": 341,
+      "events": 1159,
+      "threshold": 410.2,
+      "ratio": 0.831,
+      "centroid": [
+        -102.5,
+        23.6,
+        5.5
+      ]
+    },
+    "Moldova": {
+      "p": 0.3385,
+      "fatalities": 49,
+      "events": 105,
+      "threshold": 51.0,
+      "ratio": 0.961,
+      "centroid": [
+        28.5,
+        47.2,
+        0.8
+      ]
+    },
+    "Morocco": {
+      "p": 0.3154,
+      "fatalities": 344,
+      "events": 496,
+      "threshold": 384.2,
+      "ratio": 0.895,
+      "centroid": [
+        -6.0,
+        31.8,
+        3.0
+      ]
+    },
+    "Mozambique": {
+      "p": 0.7953,
+      "fatalities": 2877,
+      "events": 2551,
+      "threshold": 1274.5,
+      "ratio": 2.257,
+      "centroid": [
+        35.5,
+        -18.0,
+        4.5
+      ]
+    },
+    "Myanmar": {
+      "p": 0.2721,
+      "fatalities": 157,
+      "events": 801,
+      "threshold": 203.2,
+      "ratio": 0.772,
+      "centroid": [
+        96.0,
+        21.0,
+        3.5
+      ]
+    },
+    "Niger": {
+      "p": 0.2451,
+      "fatalities": 628,
+      "events": 1351,
+      "threshold": 902.8,
+      "ratio": 0.696,
+      "centroid": [
+        9.5,
+        17.6,
+        4.5
+      ]
+    },
+    "Nigeria": {
+      "p": 0.2379,
+      "fatalities": 13,
+      "events": 50,
+      "threshold": 19.2,
+      "ratio": 0.675,
+      "centroid": [
+        8.1,
+        9.6,
+        3.5
+      ]
+    },
+    "North Korea": {
+      "p": 0.1903,
+      "fatalities": 59,
+      "events": 154,
+      "threshold": 109.2,
+      "ratio": 0.54,
+      "centroid": [
+        127.0,
+        40.0,
+        1.5
+      ]
+    },
+    "Oman": {
+      "p": 0.3033,
+      "fatalities": 153,
+      "events": 779,
+      "threshold": 177.8,
+      "ratio": 0.861,
+      "centroid": [
+        56.5,
+        21.0,
+        2.5
+      ]
+    },
+    "Pakistan": {
+      "p": 0.5536,
+      "fatalities": 649,
+      "events": 555,
+      "threshold": 413.0,
+      "ratio": 1.571,
+      "centroid": [
+        69.3,
+        30.4,
+        4.0
+      ]
+    },
+    "Palestine": {
+      "p": 0.1954,
+      "fatalities": 19,
+      "events": 56,
+      "threshold": 34.2,
+      "ratio": 0.555,
+      "centroid": [
+        35.1,
+        31.9,
+        0.5
+      ]
+    },
+    "Philippines": {
+      "p": 0.2837,
+      "fatalities": 184,
+      "events": 126,
+      "threshold": 228.5,
+      "ratio": 0.805,
+      "centroid": [
+        122.0,
+        12.5,
+        3.5
+      ]
+    },
+    "Qatar": {
+      "p": 0.2695,
+      "fatalities": 140,
+      "events": 121,
+      "threshold": 183.0,
+      "ratio": 0.765,
+      "centroid": [
+        51.2,
+        25.3,
+        0.5
+      ]
+    },
+    "Russia": {
+      "p": 0.085,
+      "fatalities": 7,
+      "events": 29,
+      "threshold": 29.0,
+      "ratio": 0.241,
+      "centroid": [
+        60.0,
+        58.0,
+        15.0
+      ]
+    },
+    "Saudi Arabia": {
+      "p": 0.3976,
+      "fatalities": 224,
+      "events": 237,
+      "threshold": 198.5,
+      "ratio": 1.128,
+      "centroid": [
+        45.0,
+        24.0,
+        4.5
+      ]
+    },
+    "Somalia": {
+      "p": 0.4014,
+      "fatalities": 45,
+      "events": 110,
+      "threshold": 39.5,
+      "ratio": 1.139,
+      "centroid": [
+        46.2,
+        5.2,
+        3.5
+      ]
+    },
+    "South Korea": {
+      "p": 0.1699,
+      "fatalities": 27,
+      "events": 95,
+      "threshold": 56.0,
+      "ratio": 0.482,
+      "centroid": [
+        127.8,
+        36.4,
+        1.3
+      ]
+    },
+    "Sudan": {
+      "p": 0.2293,
+      "fatalities": 41,
+      "events": 176,
+      "threshold": 63.0,
+      "ratio": 0.651,
+      "centroid": [
+        30.0,
+        15.5,
+        4.5
+      ]
+    },
+    "Syria": {
+      "p": 0.2941,
+      "fatalities": 197,
+      "events": 556,
+      "threshold": 236.0,
+      "ratio": 0.835,
+      "centroid": [
+        38.5,
+        35.0,
+        2.0
+      ]
+    },
+    "Taiwan": {
+      "p": 0.2987,
+      "fatalities": 39,
+      "events": 58,
+      "threshold": 46.0,
+      "ratio": 0.848,
+      "centroid": [
+        121.0,
+        23.7,
+        0.8
+      ]
+    },
+    "Tunisia": {
+      "p": 0.3506,
+      "fatalities": 50,
+      "events": 67,
+      "threshold": 50.2,
+      "ratio": 0.995,
+      "centroid": [
+        9.5,
+        34.0,
+        1.8
+      ]
+    },
+    "Turkey": {
+      "p": 0.7071,
+      "fatalities": 430,
+      "events": 509,
+      "threshold": 214.2,
+      "ratio": 2.007,
+      "centroid": [
+        35.0,
+        39.0,
+        4.5
+      ]
+    },
+    "Ukraine": {
+      "p": 0.2481,
+      "fatalities": 971,
+      "events": 2223,
+      "threshold": 1378.8,
+      "ratio": 0.704,
+      "centroid": [
+        31.2,
+        48.4,
+        3.5
+      ]
+    },
+    "United Arab Emirates": {
+      "p": 0.1585,
+      "fatalities": 36,
+      "events": 101,
+      "threshold": 80.0,
+      "ratio": 0.45,
+      "centroid": [
+        54.0,
+        24.0,
+        1.2
+      ]
+    },
+    "Venezuela": {
+      "p": 0.2978,
+      "fatalities": 56,
+      "events": 76,
+      "threshold": 66.2,
+      "ratio": 0.845,
+      "centroid": [
+        -66.5,
+        7.1,
+        3.5
+      ]
+    },
+    "Yemen": {
+      "p": 0.3281,
+      "fatalities": 325,
+      "events": 959,
+      "threshold": 349.0,
+      "ratio": 0.931,
+      "centroid": [
+        47.5,
+        15.5,
+        2.5
+      ]
+    }
+  }
+}

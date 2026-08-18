@@ -1,0 +1,78 @@
+name: Refresh data
+
+# Weekly rather than daily on purpose: the Research tier serves lagged event
+# data, so a daily run would mostly commit noise and burn API quota.
+on:
+  schedule:
+    - cron: "17 6 * * 1"     # Mondays 06:17 UTC
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Map window, in days"
+        default: "180"
+      skip_panel:
+        description: "Reuse the existing monthly panel (much faster)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r research/requirements.txt
+
+      # Fails in seconds if a script imports something requirements.txt does not
+      # install, rather than halfway through a build that has already spent
+      # ACLED API calls.
+      - name: Check imports
+        run: python scripts/check-imports.py
+
+      # The raw ACLED pull is expensive and rate-limited. Caching it means a
+      # rerun only fetches the months that are actually new.
+      - name: Restore ACLED cache
+        uses: actions/cache@v4
+        with:
+          path: research/data/raw
+          key: acled-raw-${{ github.run_id }}
+          restore-keys: acled-raw-
+
+      - name: Build artifacts
+        working-directory: research
+        env:
+          ACLED_EMAIL: ${{ secrets.ACLED_EMAIL }}
+          ACLED_PASSWORD: ${{ secrets.ACLED_PASSWORD }}
+        run: |
+          python build_all.py \
+            --days "${{ github.event.inputs.days || '180' }}" \
+            ${{ github.event.inputs.skip_panel == 'true' && '--skip-panel' || '' }}
+
+      - name: Validate artifacts
+        run: node scripts/check-artifacts.mjs
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data
+          if git diff --cached --quiet; then
+            echo "No changes."
+          else
+            git commit -m "data: refresh ACLED snapshot and sensitivities"
+            git push
+          fi

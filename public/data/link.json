@@ -1,0 +1,62 @@
+{
+  "generated_at": "2026-08-18T00:56:06+00:00",
+  "spec": "z_T(t+1) = a_T + b_T * frac_escalating(T, t), Newey-West SEs",
+  "tstat_threshold": 2.0,
+  "themes": {
+    "oil_supply": {
+      "intercept": -0.793424,
+      "slope": 2.149903,
+      "se": 0.643945,
+      "tstat": 3.339,
+      "pvalue": 0.0013,
+      "r2": 0.069,
+      "n": 80,
+      "mean_frac": 0.358,
+      "significant": true
+    },
+    "eastern_europe": {
+      "intercept": 0.002579,
+      "slope": 0.440515,
+      "se": 0.773189,
+      "tstat": 0.57,
+      "pvalue": 0.5705,
+      "r2": 0.005,
+      "n": 80,
+      "mean_frac": 0.1281,
+      "significant": false
+    },
+    "mena": {
+      "intercept": -0.440158,
+      "slope": 1.134601,
+      "se": 0.967383,
+      "tstat": 1.173,
+      "pvalue": 0.2444,
+      "r2": 0.0218,
+      "n": 80,
+      "mean_frac": 0.3837,
+      "significant": false
+    },
+    "east_asia": {
+      "intercept": -0.384739,
+      "slope": 2.155454,
+      "se": 0.796925,
+      "tstat": 2.705,
+      "pvalue": 0.0084,
+      "r2": 0.0804,
+      "n": 80,
+      "mean_frac": 0.185,
+      "significant": true
+    },
+    "global": {
+      "intercept": -1.331574,
+      "slope": 4.862852,
+      "se": 1.94789,
+      "tstat": 2.496,
+      "pvalue": 0.0147,
+      "r2": 0.0659,
+      "n": 80,
+      "mean_frac": 0.299,
+      "significant": true
+    }
+  }
+}
