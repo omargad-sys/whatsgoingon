@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import maplibregl, {
   type GeoJSONSource,
   type Map as MapLibreMap,
@@ -117,6 +117,7 @@ export default function ConflictMap({ heat, events, filters, mode, focus }: Prop
   const map = useRef<MapLibreMap | null>(null);
   const ready = useRef(false);
   const popup = useRef<MapLibrePopup | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
 
   const heatData = useMemo(
     () => heatToGeoJSON(heat, filters.from, filters.to),
@@ -150,8 +151,50 @@ export default function ConflictMap({ heat, events, filters, mode, focus }: Prop
     instance.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     instance.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
 
+    // A zero-size container is the failure this map has actually shipped with:
+    // MapLibre initialises happily, WebGL works, the style downloads, and the
+    // user sees a black rectangle because the element has no height. Detect it
+    // and say so, rather than rendering nothing and looking broken.
+    const checkSize = () => {
+      const el = container.current;
+      if (!el) return;
+      if (el.clientHeight < 2 || el.clientWidth < 2) {
+        setFailure(
+          `Map container has no size (${el.clientWidth}x${el.clientHeight}). ` +
+            "This is a layout bug, not a data problem.",
+        );
+      } else {
+        setFailure((f) => (f && f.startsWith("Map container") ? null : f));
+      }
+    };
+    checkSize();
+
+    // Re-measure on layout changes. Panels opening, the window resizing and the
+    // mobile breakpoint all change the pane, and MapLibre does not notice on
+    // its own.
+    const observer = new ResizeObserver(() => {
+      instance.resize();
+      checkSize();
+    });
+    if (container.current) observer.observe(container.current);
+
+    // If the style never resolves, `load` never fires and no layer is ever
+    // added. Surface that instead of waiting forever on a blank canvas.
+    const loadTimer = setTimeout(() => {
+      if (!ready.current) {
+        setFailure("Basemap did not load. Check for a blocked request to basemaps.cartocdn.com.");
+      }
+    }, 12000);
+
+    instance.on("error", (e: { error?: { message?: string } }) => {
+      const message = e.error?.message ?? "unknown";
+      console.error("[map]", message);
+    });
+
     instance.on("load", () => {
       ready.current = true;
+      clearTimeout(loadTimer);
+      setFailure((f) => (f && f.startsWith("Basemap") ? null : f));
       instance.addSource(HEAT_SOURCE, { type: "geojson", data: EMPTY });
       instance.addSource(EVENT_SOURCE, { type: "geojson", data: EMPTY });
 
@@ -223,6 +266,8 @@ export default function ConflictMap({ heat, events, filters, mode, focus }: Prop
 
     map.current = instance;
     return () => {
+      clearTimeout(loadTimer);
+      observer.disconnect();
       popup.current?.remove();
       instance.remove();
       map.current = null;
@@ -270,5 +315,18 @@ export default function ConflictMap({ heat, events, filters, mode, focus }: Prop
     });
   }, [focus]);
 
-  return <div className="map-root" ref={container} role="application" aria-label="Conflict event map" />;
+  return (
+    <>
+      <div className="map-root" ref={container} role="application" aria-label="Conflict event map" />
+      {failure && (
+        <div className="map-failure" role="alert">
+          <strong>The map isn&apos;t rendering.</strong>
+          <span>{failure}</span>
+          <span className="muted">
+            The forecast, themes and portfolio panels are unaffected and still accurate.
+          </span>
+        </div>
+      )}
+    </>
+  );
 }
