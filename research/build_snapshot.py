@@ -38,7 +38,7 @@ def _load_fixture():
 PROBE = ("Ukraine", "Mexico", "Yemen", "Myanmar")
 
 
-def discover_latest(token, max_years_back=4):
+def discover_latest(token, months_back=36):
     """Find the most recent event date this account can actually see.
 
     ACLED's Research tier serves lagged data, so "today minus 180 days" can sit
@@ -46,29 +46,32 @@ def discover_latest(token, max_years_back=4):
     production run of this pipeline requested 2026-02-19..2026-08-18, got zero
     rows for all 51 countries, and exited 1 after 50 minutes of fetching. The
     window has to come from the data, not from the calendar.
+
+    Uses `latest_event_date`, which walks back a month at a time asking for one
+    row and one field. The previous version pulled whole country-years for four
+    probe countries just to read a date off the end, spending minutes and a lot
+    of quota before the real fetch had started.
     """
-    from fetch_events import fetch_events
+    from fetch_events import latest_event_date
 
     today = pd.Timestamp(dt.date.today())
-    for back in range(max_years_back):
-        year = today.year - back
-        latest = None
-        for country in PROBE:
-            df = fetch_events(token, country, year)
-            if not len(df):
-                continue
-            d = pd.to_datetime(df["event_date"], errors="coerce").max()
-            if pd.notna(d) and (latest is None or d > latest):
-                latest = d
-        if latest is not None:
-            if back > 0:
-                print(f"  note: no data for {today.year}; latest available is {latest:%Y-%m-%d}")
-            return latest
-    raise SystemExit(
-        "Could not find any events in the last "
-        f"{max_years_back} years for {', '.join(PROBE)}.\n"
-        "Credentials work but the account appears to have no event-level access."
-    )
+    latest = None
+    for country in PROBE:
+        d = latest_event_date(token, country, months_back=months_back)
+        if d is not None and (latest is None or d > latest):
+            latest = d
+
+    if latest is None:
+        raise SystemExit(
+            "Could not find any events in the last "
+            f"{months_back} months for {', '.join(PROBE)}.\n"
+            "Credentials work but the account appears to have no event-level access."
+        )
+
+    lag = (today - latest).days
+    if lag > 45:
+        print(f"  note: this account's data ends {latest:%Y-%m-%d}, {lag} days behind today")
+    return latest
 
 
 def _load_from_api(countries, start, end):

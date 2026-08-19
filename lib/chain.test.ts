@@ -22,6 +22,7 @@ import {
 import { buildLookup } from "./exposure";
 import { PARTITION_THEMES, THEMES } from "./themes";
 import type { Forecast, Link, Sensitivities, ThemeId } from "./types";
+import { dataLag } from "./format";
 
 const ALL = ["Iran", "Iraq", "Saudi Arabia", "Ukraine", "Russia"];
 
@@ -387,4 +388,35 @@ test("the partition is disjoint and covers the universe", () => {
   expect(doubled).toEqual([]);
   // Overlay members must all appear somewhere in the partition.
   for (const c of THEMES.oil_supply.countries) expect(seen.has(c)).toBe(true);
+});
+
+/* ------------------------------------------------------------- data lag */
+
+test("the data lag is measured from the artifacts, not assumed", () => {
+  const day = 86_400_000;
+  const iso = (msAgo: number) => new Date(Date.now() - msAgo).toISOString().slice(0, 10);
+
+  // A weekly-tier account: recent enough that the banner should stay hidden.
+  const fresh = dataLag(iso(9 * day));
+  expect(fresh).not.toBeNull();
+  expect(fresh!.material).toBe(false);
+
+  // The research tier this project actually runs on: ~12 months behind.
+  const lagged = dataLag(iso(364 * day));
+  expect(lagged).not.toBeNull();
+  expect(lagged!.material).toBe(true);
+  expect(lagged!.days).toBeGreaterThanOrEqual(363);
+  expect(lagged!.phrase).toBe("about 12 months");
+
+  // Right at the boundary the banner turns on rather than off, because
+  // understating staleness is the failure that matters.
+  expect(dataLag(iso(45 * day))!.material).toBe(true);
+  expect(dataLag(iso(44 * day))!.material).toBe(false);
+});
+
+test("a build with no recorded coverage window reports nothing rather than zero", () => {
+  // Zero days behind would render as "current", which is the one thing a
+  // missing value must never be allowed to claim.
+  expect(dataLag(null)).toBeNull();
+  expect(dataLag("not a date")).toBeNull();
 });

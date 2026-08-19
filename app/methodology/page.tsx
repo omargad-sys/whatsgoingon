@@ -39,6 +39,34 @@ export default function Methodology() {
         </div>
       )}
 
+      <h2 id="lag">How current the data is</h2>
+      <p>
+        {man.acled.last_week ? (
+          <>
+            Events on this site run through <strong>{man.acled.last_week}</strong>.
+          </>
+        ) : (
+          <>This build has no ACLED coverage window recorded.</>
+        )}{" "}
+        That is not a bug and it is not a refresh problem: ACLED sells access in tiers,
+        and the research tier this project runs on releases event-level data on a rolling
+        delay. Measured against the account directly, the delay is about twelve months.
+        Higher tiers get weekly data; this one does not.
+      </p>
+      <p>
+        So read the map as history, not as a news feed. What it shows is real, precisely
+        located, and independently coded, but it is a picture of last year. The pipeline
+        derives its window from what the account can actually read rather than from the
+        calendar, so if the tier is ever upgraded the site follows automatically and the
+        banner disappears on its own.
+      </p>
+      <p>
+        The forecast layer inherits the same shift. It predicts escalation for the month
+        after the data ends, which is a month that has already happened. As a
+        demonstration that the chain works end to end it is honest; as a trading signal
+        it is worthless, which is why nothing here is phrased as advice.
+      </p>
+
       <h2>The short version</h2>
       <p>Three models in a chain, each with its own gate:</p>
       <ol>

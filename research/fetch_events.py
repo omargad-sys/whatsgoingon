@@ -10,6 +10,7 @@ Added since: field selection (payload is ~4x smaller), retry with backoff,
 a max_pages guard, and fetch_events_between() for date-range pulls.
 """
 
+import datetime as dt
 import os
 import time
 
@@ -136,6 +137,71 @@ def _paginate(base_params, token, label):
         print(f"  {label}: hit MAX_PAGES={MAX_PAGES}, results may be truncated")
 
     return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=FIELDS)
+
+
+def _probe(token, country, start, end, limit=1):
+    """One tiny request: does `country` have any event in [start, end]?
+
+    Asks for a single row and a single field, so the response is a few hundred
+    bytes instead of a few megabytes. Returns the rows the API sent back.
+    """
+    params = {
+        "country": country,
+        "event_date": f"{start}|{end}",
+        "event_date_where": "BETWEEN",
+        "limit": limit,
+        "page": 1,
+        "_format": "json",
+        "fields": "event_date",
+    }
+    payload = _get_with_retry(params, token).json()
+    rows = payload.get("data", payload) if isinstance(payload, dict) else payload
+    return rows or []
+
+
+def _latest_day_in(token, country, start, end):
+    """Binary search the last day inside [start, end] that has an event.
+
+    Every probe asks for one row, so this is ~5 tiny requests for a month. The
+    alternative, pulling the month and taking the max date, silently truncates
+    at the 5000-row cap: Ukraine clears that in a single month, and the answer
+    would then depend on whatever order the API happened to return.
+    """
+    lo, hi = start, end
+    best = start
+    while lo <= hi:
+        mid = lo + (hi - lo) / 2
+        mid = pd.Timestamp(mid.date())
+        if _probe(token, country, mid.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")):
+            best = mid
+            lo = mid + pd.Timedelta(days=1)
+        else:
+            hi = mid - pd.Timedelta(days=1)
+    return best
+
+
+def latest_event_date(token, country, months_back=36):
+    """Most recent event date this account can read for `country`, or None.
+
+    Walks backwards a month at a time from the current month, stops at the
+    first month that has anything, then binary searches that month for the
+    exact day. Every request asks for one row and one field.
+
+    The obvious implementation, pulling a whole country-year and taking the max
+    date, costs tens of thousands of rows to answer a one-row question. On
+    Ukraine that is minutes per probe, and it is why `check_coverage.py` looked
+    like it had hung.
+    """
+    cursor = pd.Timestamp(dt.date.today()).to_period("M")
+
+    for _ in range(months_back):
+        start = cursor.start_time
+        end = cursor.end_time.normalize()
+        if _probe(token, country, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")):
+            return _latest_day_in(token, country, start, end)
+        cursor -= 1
+
+    return None
 
 
 def fetch_events(token, country, year, page_size=PAGE_SIZE):

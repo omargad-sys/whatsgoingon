@@ -3,6 +3,7 @@
     cd research && python -m unittest discover tests -v
 """
 
+import datetime as dt
 import sys
 import unittest
 from pathlib import Path
@@ -395,3 +396,71 @@ class TestThemePartition(unittest.TestCase):
                 continue
             for country in meta["countries"]:
                 self.assertIn(country, covered, f"{theme} references uncovered {country}")
+
+
+class TestCoverageProbe(unittest.TestCase):
+    """`latest_event_date` has to be cheap and exact.
+
+    The version this replaced pulled entire country-years to read one date off
+    the end. On Ukraine that is tens of thousands of rows per probe, it burned
+    quota before the real fetch started, and to the person running
+    check_coverage.py it looked like a hang.
+    """
+
+    def _install_fake_api(self, data_end):
+        import fetch_events as fe
+
+        self.calls = []
+        end_ts = pd.Timestamp(data_end)
+
+        class Response:
+            def __init__(self, rows):
+                self.rows = rows
+
+            def json(self):
+                return {"data": self.rows}
+
+        def fake_get(params, token, attempts=4):
+            self.calls.append(params)
+            lo, hi = params["event_date"].split("|")
+            lo, hi = pd.Timestamp(lo), pd.Timestamp(hi)
+            hi = min(hi, end_ts)
+            if hi < lo:
+                return Response([])
+            days = pd.date_range(lo, hi, freq="D")
+            rows = [{"event_date": d.strftime("%Y-%m-%d")} for d in days]
+            return Response(rows[: params["limit"]])
+
+        self._original = fe._get_with_retry
+        fe._get_with_retry = fake_get
+        self.addCleanup(lambda: setattr(fe, "_get_with_retry", self._original))
+        return fe
+
+    def test_finds_the_exact_last_day_of_data(self):
+        today = pd.Timestamp(dt.date.today())
+        for back in (0, 5, 40, 96, 200):
+            target = (today - pd.Timedelta(days=back)).normalize()
+            fe = self._install_fake_api(target)
+            found = fe.latest_event_date("token", "Ukraine")
+            self.assertEqual(
+                found.date(),
+                target.date(),
+                f"probe landed on {found} when the data ends {target}",
+            )
+
+    def test_every_request_is_a_single_row(self):
+        """The whole point is that this stays cheap even against Ukraine."""
+        fe = self._install_fake_api(pd.Timestamp(dt.date.today()) - pd.Timedelta(days=70))
+        fe.latest_event_date("token", "Ukraine")
+        self.assertTrue(self.calls, "probe made no requests at all")
+        self.assertEqual(
+            {c["limit"] for c in self.calls},
+            {1},
+            "a probe asked for more than one row",
+        )
+        self.assertEqual({c["fields"] for c in self.calls}, {"event_date"})
+        self.assertLess(len(self.calls), 20, "probe is making too many requests")
+
+    def test_returns_none_when_the_account_sees_nothing(self):
+        fe = self._install_fake_api(pd.Timestamp("1990-01-01"))
+        self.assertIsNone(fe.latest_event_date("token", "Ukraine", months_back=6))

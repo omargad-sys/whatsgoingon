@@ -73,3 +73,42 @@ export function decodeHoldings(raw: string | null, allowed: string[]): Holding[]
   }
   return out.length ? out : null;
 }
+
+/* --------------------------------------------------------------- data lag */
+
+export interface DataLag {
+  /** last day of ACLED coverage in this build, YYYY-MM-DD */
+  cutoff: string;
+  days: number;
+  /** true once the gap is wide enough that calling the map "current" misleads */
+  material: boolean;
+  /** human phrasing, e.g. "about 12 months" */
+  phrase: string;
+}
+
+/**
+ * How far behind today the underlying events actually are.
+ *
+ * This is not cosmetic. ACLED's Research tier serves event data on a rolling
+ * delay, measured at 364 days on the account this site runs on. A map built
+ * from that data is a picture of last year, and a site that renders it under
+ * the word "live" is lying about the one thing a conflict map is for. The
+ * number comes from the artifacts rather than a hardcoded constant, so it
+ * self-corrects if the account is ever upgraded to a weekly tier.
+ */
+export function dataLag(lastWeek: string | null): DataLag | null {
+  if (!lastWeek) return null;
+  const t = Date.parse(lastWeek);
+  if (!Number.isFinite(t)) return null;
+
+  const days = Math.max(0, Math.round((Date.now() - t) / 86_400_000));
+  const months = days / 30.44;
+  const phrase =
+    days < 45
+      ? `${days} days`
+      : months < 22
+        ? `about ${Math.round(months)} months`
+        : `about ${(months / 12).toFixed(1)} years`;
+
+  return { cutoff: lastWeek, days, material: days >= 45, phrase };
+}

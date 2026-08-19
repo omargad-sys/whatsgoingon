@@ -24,7 +24,7 @@ import {
 } from "@/lib/chain";
 import { SEVERITY_BANDS, THEMES, THEME_ORDER, TICKER_LIST } from "@/lib/themes";
 import { HEAT_RAMP } from "@/lib/mapTheme";
-import { decodeHoldings, encodeHoldings, relativeAge } from "@/lib/format";
+import { dataLag, decodeHoldings, encodeHoldings, relativeAge } from "@/lib/format";
 import type {
   CountryMonthly,
   EventCollection,
@@ -234,6 +234,10 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
     ).length;
   }, [events, filters, types, minFatalities]);
 
+  // How stale the events actually are. Driven by the artifacts, so it goes
+  // away on its own if the account is ever moved to a weekly ACLED tier.
+  const lag = useMemo(() => dataLag(manifest.acled.last_week), [manifest]);
+
   /* ------------------------------------------------------------ render */
 
   return (
@@ -268,6 +272,17 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
         <div className="banner" role="status">
           <strong>Synthetic data.</strong> This build was made from generated fixtures, not
           from ACLED. Every number on this page is fake.
+        </div>
+      )}
+
+      {!manifest.synthetic && lag?.material && (
+        <div className="banner banner--info" role="status">
+          <span>
+            <strong>Events through {lag.cutoff}</strong>, which is {lag.phrase} behind
+            today. This is not a live feed: ACLED releases event-level data to research
+            accounts on a delay.{" "}
+            <a href="/methodology#lag">What that means for the numbers</a>
+          </span>
         </div>
       )}
 
@@ -383,7 +398,8 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
               )}
             </p>
             <p className="hint" style={{ margin: "8px 0 0", fontSize: 11.5 }}>
-              Conflict data as of {forecast.as_of_month.slice(0, 7)}, refreshed{" "}
+              Conflict data through {lag ? lag.cutoff : forecast.as_of_month.slice(0, 7)}
+              {lag?.material ? `, ${lag.phrase} behind today` : ""}. Pipeline last ran{" "}
               {relativeAge(manifest.generated_at)}.
             </p>
           </section>

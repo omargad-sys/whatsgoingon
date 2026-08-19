@@ -236,6 +236,18 @@ select {
   font-size: 12.5px;
 }
 
+/* A standing fact about the data, not a fault. Reads as information rather
+   than alarm, but still sits above the fold where it cannot be missed. */
+.banner--info {
+  background: color-mix(in srgb, var(--series-1) 10%, var(--surface-1));
+}
+
+.banner--info a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* ------------------------------------------------------------------- body */
 
 .body {
