@@ -14,6 +14,7 @@ import {
   chainTheme,
   chainedTotal,
   holdingOutlooks,
+  movers,
   portfolioOutlook,
   rankedRisk,
   themeForecast,
@@ -322,4 +323,36 @@ test("a portfolio with nothing identified reports zero measured, not a zero retu
   );
   expect(portfolioOutlook(outlooks).measured).toBe(0);
   expect(outlooks[0].expected).toBeUndefined();
+});
+
+/* -------------------------------------------------------------- movers */
+
+function withPrevious(now: Record<string, number>, then: Record<string, number>): Forecast {
+  return { ...forecast(now), previous: { as_of_month: "2026-06-01", countries: then } };
+}
+
+test("no previous run means no movers, rather than an invented baseline", () => {
+  expect(movers(forecast({ Iran: 0.9, Iraq: 0.1 }))).toHaveLength(0);
+});
+
+test("movers are ranked by absolute change and respect the limit", () => {
+  const f = withPrevious(
+    { Iran: 0.90, Iraq: 0.20, Russia: 0.50 },
+    { Iran: 0.50, Iraq: 0.60, Russia: 0.48 },
+  );
+  const m = movers(f, 2);
+  expect(m.map((x) => x.country)).toEqual(["Iran", "Iraq"]);
+  expect(m[0].delta).toBeCloseTo(0.4, 10);
+  expect(m[1].delta).toBeCloseTo(-0.4, 10);
+});
+
+test("small wobble is filtered out as model churn", () => {
+  const f = withPrevious({ Iran: 0.51 }, { Iran: 0.50 });
+  expect(movers(f)).toHaveLength(0);
+});
+
+test("a country absent from the previous run is skipped, not treated as zero", () => {
+  const f = withPrevious({ Iran: 0.9, Taiwan: 0.8 }, { Iran: 0.85 });
+  const m = movers(f, 5, 0.0);
+  expect(m.map((x) => x.country)).toEqual(["Iran"]);
 });

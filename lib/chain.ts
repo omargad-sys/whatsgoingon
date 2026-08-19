@@ -312,3 +312,42 @@ export function portfolioOutlook(outlooks: HoldingOutlook[]) {
   }
   return { value, covered, measured, total: outlooks.length };
 }
+
+
+/* ------------------------------------------------------------ what moved */
+
+export interface Mover {
+  country: string;
+  now: number;
+  then: number;
+  delta: number;
+}
+
+/**
+ * Countries whose escalation probability moved most since the previous run.
+ *
+ * Returns an empty list when there is no previous run rather than inventing a
+ * baseline, so a first deploy shows nothing instead of claiming everything just
+ * changed. `minDelta` filters out the churn that is really just the model
+ * re-fitting on one more month of data.
+ */
+export function movers(forecast: Forecast, limit = 3, minDelta = 0.03): Mover[] {
+  const prev = forecast.previous;
+  if (!prev?.countries) return [];
+
+  const out: Mover[] = [];
+  for (const [country, row] of Object.entries(forecast.countries)) {
+    const then = prev.countries[country];
+    if (then === undefined || !Number.isFinite(then)) continue;
+    const delta = row.p - then;
+    if (Math.abs(delta) < minDelta) continue;
+    out.push({ country, now: row.p, then, delta });
+  }
+
+  return out.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, limit);
+}
+
+/** Per-country lookup of movement, for annotating the risk list. */
+export function moverMap(forecast: Forecast, minDelta = 0.03): Record<string, number> {
+  return Object.fromEntries(movers(forecast, Number.MAX_SAFE_INTEGER, minDelta).map((m) => [m.country, m.delta]));
+}

@@ -115,6 +115,12 @@ export interface ForecastCountry {
   centroid: [number, number, number] | null;
 }
 
+export interface ForecastPrevious {
+  as_of_month: string;
+  /** country -> probability from the previous run */
+  countries: Record<string, number>;
+}
+
 export interface Forecast {
   generated_at: string;
   as_of_month: string;
@@ -124,6 +130,8 @@ export interface Forecast {
   /** which predictor actually won the walk-forward comparison */
   source: "model" | "baseline";
   backend: string;
+  /** Last run's probabilities, for week-over-week movement. Null on a first run. */
+  previous?: ForecastPrevious | null;
   evaluation: {
     model_roc_auc: number;
     baseline_roc_auc: number;

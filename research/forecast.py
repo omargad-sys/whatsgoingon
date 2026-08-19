@@ -34,6 +34,32 @@ from paths import COUNTRY_MONTHLY, FIXTURE_DIR, FORECAST, ensure_dirs, read_json
 MIN_TRAIN_ROWS = 120
 
 
+def carry_previous(new_as_of):
+    """Keep the last run's probabilities so the app can show what moved.
+
+    Only carried when the previous file covers a DIFFERENT month. Re-running the
+    pipeline twice in one week must not produce a comparison of a month against
+    itself, which would silently report that nothing ever changes; in that case
+    the older comparison is preserved instead.
+    """
+    if not FORECAST.exists():
+        return None
+    try:
+        old = read_json(FORECAST)
+    except Exception:  # noqa: BLE001 - a corrupt previous file must not stop a build
+        return None
+
+    old_as_of = old.get("as_of_month")
+    if old_as_of and old_as_of != new_as_of:
+        return {
+            "as_of_month": old_as_of,
+            "countries": {
+                name: v["p"] for name, v in old.get("countries", {}).items() if "p" in v
+            },
+        }
+    return old.get("previous")
+
+
 def load_panel(fixture):
     if fixture:
         return pd.read_csv(FIXTURE_DIR / "panel_sample.csv")
@@ -202,6 +228,7 @@ def main():
             "threshold_quantile": args.quantile,
             "source": source,
             "backend": backend,
+            "previous": carry_previous(pd.Timestamp(latest).strftime("%Y-%m-%d")),
             "evaluation": {
                 "model_roc_auc": round(float(ev["model_roc"].mean()), 4),
                 "baseline_roc_auc": round(float(ev["base_roc"].mean()), 4),

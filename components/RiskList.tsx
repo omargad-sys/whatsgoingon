@@ -1,6 +1,6 @@
 "use client";
 
-import { rankedRisk } from "@/lib/chain";
+import { moverMap, rankedRisk } from "@/lib/chain";
 import type { Forecast } from "@/lib/types";
 
 interface Props {
@@ -19,6 +19,7 @@ interface Props {
 export default function RiskList({ forecast, onSelect, selected, limit = 10 }: Props) {
   const rows = rankedRisk(forecast, limit);
   const max = Math.max(0.01, ...rows.map((r) => r.p));
+  const moved = moverMap(forecast);
 
   if (!rows.length) return <p className="hint">No forecast available.</p>;
 
@@ -61,7 +62,20 @@ export default function RiskList({ forecast, onSelect, selected, limit = 10 }: P
                   />
                 </div>
               </td>
-              <td className="num">{r.p.toFixed(2)}</td>
+              <td className="num">
+                {r.p.toFixed(2)}
+                {moved[r.country] !== undefined && (
+                  <span
+                    className={`delta ${moved[r.country] > 0 ? "up" : "down"}`}
+                    title={`${moved[r.country] > 0 ? "up" : "down"} ${Math.abs(
+                      moved[r.country],
+                    ).toFixed(2)} since ${forecast.previous?.as_of_month.slice(0, 7)}`}
+                  >
+                    {moved[r.country] > 0 ? "▲" : "▼"}
+                    {Math.abs(moved[r.country]).toFixed(2)}
+                  </span>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

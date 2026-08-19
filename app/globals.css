@@ -703,6 +703,10 @@ table.data th.num {
 /* ------------------------------------------------------------------ small */
 
 @media (max-width: 900px) {
+  /* Everything becomes auto-height and the page scrolls normally. The desktop
+     layout gives .body the leftover viewport with flex-basis 0, which on a
+     narrow screen would constrain a column whose content is far taller than the
+     viewport, so the flex sizing has to be undone rather than inherited. */
   .shell {
     height: auto;
     min-height: 100dvh;
@@ -710,14 +714,22 @@ table.data th.num {
   }
 
   .body {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    min-height: 0;
   }
 
+  /* 46dvh, not 58: the headline number has to be visible without scrolling, or
+     the first thing a phone user sees is a map with no idea what it is for. */
   .map-pane {
-    height: 58dvh;
+    flex: 0 0 auto;
+    height: 46dvh;
+    min-height: 260px;
   }
 
   .side {
+    flex: 0 0 auto;
     border-left: 0;
     border-top: 1px solid var(--border);
     overflow-y: visible;
@@ -725,14 +737,74 @@ table.data th.num {
 
   .map-overlay.timeline {
     width: calc(100% - 24px);
+    padding: 8px 10px;
   }
 
-  .map-overlay.legend {
+  /* One scrollable row rather than wrapping. Wrapped pills grew to three rows
+     on a phone and covered most of the map. */
+  .map-overlay.filters {
+    max-width: calc(100% - 24px);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 7px 9px;
+  }
+
+  .map-overlay.filters::-webkit-scrollbar {
     display: none;
+  }
+
+  .map-overlay.filters .pill {
+    flex: 0 0 auto;
+  }
+
+  /* Keep the severity key rather than dropping it. Without it the coloured dots
+     are unexplained, which is worse than the space it costs. The density ramp
+     goes, since it is the less load-bearing half. */
+  .map-overlay.legend {
+    left: 12px;
+    bottom: 66px;
+    max-width: calc(100% - 24px);
+    padding: 7px 9px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+  }
+
+  .map-overlay.legend .legend-title,
+  .map-overlay.legend .legend-ramp,
+  .map-overlay.legend .legend-scale {
+    display: none;
+  }
+
+  .map-overlay.legend .legend-row {
+    margin-bottom: 0;
+    font-size: 11px;
+    gap: 5px;
+  }
+
+  /* 44px is the usual minimum comfortable touch target. */
+  .pill {
+    padding: 9px 12px;
+  }
+
+  .icon-btn {
+    height: 38px;
+  }
+
+  /* iOS zooms the viewport when a focused input is under 16px. */
+  .holding input,
+  .holding select {
+    font-size: 16px;
+    padding: 9px 8px;
   }
 
   .brand .tag {
     display: none;
+  }
+
+  .headline {
+    font-size: 26px;
   }
 }
 
@@ -1094,4 +1166,27 @@ details.folded > summary:hover {
 
 details.folded > div {
   padding-top: 10px;
+}
+
+.delta {
+  margin-left: 6px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Direction is carried by the arrow glyph as well as the hue, so this reads
+   correctly in greyscale and for colour-vision differences. */
+.delta.up {
+  color: var(--status-serious);
+}
+
+.delta.down {
+  color: var(--status-good);
+}
+
+.whatchanged {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.5;
 }

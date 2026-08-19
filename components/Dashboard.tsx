@@ -15,7 +15,13 @@ import TimeSlider from "./TimeSlider";
 import type { MapFilters } from "./ConflictMap";
 
 import { allThemeImpacts, buildLookup } from "@/lib/exposure";
-import { chainAll, holdingOutlooks, portfolioOutlook, toThemeImpactShape } from "@/lib/chain";
+import {
+  chainAll,
+  holdingOutlooks,
+  movers,
+  portfolioOutlook,
+  toThemeImpactShape,
+} from "@/lib/chain";
 import { SEVERITY_BANDS, THEMES, THEME_ORDER, TICKER_LIST } from "@/lib/themes";
 import { HEAT_RAMP } from "@/lib/mapTheme";
 import { decodeHoldings, encodeHoldings, relativeAge } from "@/lib/format";
@@ -164,6 +170,7 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
     [holdings, lookup, forecast, link, allCountries],
   );
   const portfolio = useMemo(() => portfolioOutlook(outlooks), [outlooks]);
+  const moved = useMemo(() => movers(forecast, 3), [forecast]);
 
   /* -------------------------------------------------------------- map */
 
@@ -380,6 +387,31 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
 
           <section className="section">
             <h2>Escalation forecast · {forecast.target_month.slice(0, 7)}</h2>
+            {moved.length > 0 && (
+              <p className="whatchanged">
+                <span className="muted">
+                  Since {forecast.previous?.as_of_month.slice(0, 7)}:
+                </span>{" "}
+                {moved.map((m, i) => (
+                  <span key={m.country}>
+                    {i > 0 && ", "}
+                    <button
+                      type="button"
+                      className="linklike"
+                      onClick={() =>
+                        onSelectCountry(m.country, forecast.countries[m.country]?.centroid ?? null)
+                      }
+                    >
+                      {m.country}
+                    </button>{" "}
+                    <span className={m.delta > 0 ? "delta up" : "delta down"}>
+                      {m.delta > 0 ? "▲" : "▼"}
+                      {Math.abs(m.delta).toFixed(2)}
+                    </span>
+                  </span>
+                ))}
+              </p>
+            )}
             {country && (
               <p style={{ margin: "0 0 10px" }}>
                 <span className="selection-chip">
