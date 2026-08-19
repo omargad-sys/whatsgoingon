@@ -56,6 +56,8 @@ def main():
     step("sensitivities", ["build_sensitivities.py", *flag])
     step("forecast", ["forecast.py", *flag])
     step("link", ["build_link.py", *flag])
+    # Last, so the share card reflects everything above it.
+    step("share card", ["build_og.py"])
 
     heat = read_json(WORLD_HEAT)
     events = read_json(EVENTS_TOP)

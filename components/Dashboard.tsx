@@ -83,6 +83,7 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
   const [minFatalities, setMinFatalities] = useState(0);
   const [mode, setMode] = useState<"dark" | "light">("dark");
   const [focus, setFocus] = useState<[number, number, number] | null>(null);
+  const [country, setCountry] = useState<string | null>(null);
 
   /* --------------------------------------------------------------- data */
 
@@ -159,6 +160,14 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
 
   /* -------------------------------------------------------------- map */
 
+  const probabilities = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(forecast.countries).map(([name, v]) => [name, v.p]),
+      ),
+    [forecast],
+  );
+
   const filters: MapFilters = useMemo(
     () => ({
       from: Math.max(0, week - (windowWeeks - 1)),
@@ -167,6 +176,16 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
       minFatalities,
     }),
     [week, windowWeeks, types, minFatalities],
+  );
+
+  // Selecting from either side drives the same state, so the map and the risk
+  // list can never disagree about what is selected.
+  const onSelectCountry = useCallback(
+    (name: string, centroid: [number, number, number] | null) => {
+      setCountry((prev) => (prev === name ? null : name));
+      if (centroid) setFocus(centroid);
+    },
+    [],
   );
 
   const onSelectTheme = useCallback((t: ThemeId) => {
@@ -249,6 +268,11 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
             filters={filters}
             mode={mode}
             focus={focus}
+            highlight={country}
+            probabilities={probabilities}
+            onPickCountry={(c: string) =>
+              onSelectCountry(c, forecast.countries[c]?.centroid ?? null)
+            }
           />
 
           <div className="map-overlay filters">
@@ -350,7 +374,21 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
 
           <section className="section">
             <h2>Escalation forecast · {forecast.target_month.slice(0, 7)}</h2>
-            <RiskList forecast={forecast} onFocus={(c) => setFocus(c)} />
+            {country && (
+              <p style={{ margin: "0 0 10px" }}>
+                <span className="selection-chip">
+                  {country}
+                  <button
+                    type="button"
+                    onClick={() => setCountry(null)}
+                    aria-label={`Clear ${country} selection`}
+                  >
+                    ×
+                  </button>
+                </span>
+              </p>
+            )}
+            <RiskList forecast={forecast} onSelect={onSelectCountry} selected={country} />
           </section>
 
           <section className="section">

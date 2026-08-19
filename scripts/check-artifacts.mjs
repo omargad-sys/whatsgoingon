@@ -248,6 +248,16 @@ if (lk) {
   }
 }
 
+/* -------------------------------------------------------------- og image */
+const ogPath = join(root, "public", "og.png");
+if (!existsSync(ogPath)) {
+  warn("og.png missing. Shared links will have no preview image. Run research/build_og.py.");
+} else {
+  const kb = statSync(ogPath).size / 1024;
+  if (kb < 5) fail(`og.png is only ${kb.toFixed(0)} KB, almost certainly truncated`);
+  if (kb > 1024) warn(`og.png is ${kb.toFixed(0)} KB; some scrapers skip images over 1 MB`);
+}
+
 /* ---------------------------------------------------------------- report */
 for (const w of warnings) console.warn(`warn  ${w}`);
 for (const e of errors) console.error(`FAIL  ${e}`);

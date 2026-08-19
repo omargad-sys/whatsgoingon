@@ -900,3 +900,45 @@ table.data th.num {
 .maplibregl-popup.maplibregl-popup-anchor-right .maplibregl-popup-tip {
   border-left-color: var(--surface-1);
 }
+
+.map-hover {
+  position: absolute;
+  z-index: 7;
+  pointer-events: none;
+  max-width: 250px;
+  padding: 7px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-1) 95%, transparent);
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.selection-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px;
+  border: 1px solid var(--series-1);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--series-1) 14%, transparent);
+  font-size: 12px;
+}
+
+.selection-chip button {
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.selection-chip button:hover {
+  color: var(--text-primary);
+}
+
+tr[data-selected="true"] td {
+  background: color-mix(in srgb, var(--series-1) 12%, transparent);
+}

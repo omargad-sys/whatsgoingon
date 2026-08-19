@@ -5,7 +5,8 @@ import type { Forecast } from "@/lib/types";
 
 interface Props {
   forecast: Forecast;
-  onFocus: (centroid: [number, number, number]) => void;
+  onSelect: (country: string, centroid: [number, number, number] | null) => void;
+  selected?: string | null;
   limit?: number;
 }
 
@@ -15,7 +16,7 @@ interface Props {
  * probability is a magnitude and colouring each country differently would
  * imply an identity that does not exist.
  */
-export default function RiskList({ forecast, onFocus, limit = 10 }: Props) {
+export default function RiskList({ forecast, onSelect, selected, limit = 10 }: Props) {
   const rows = rankedRisk(forecast, limit);
   const max = Math.max(0.01, ...rows.map((r) => r.p));
 
@@ -40,20 +41,17 @@ export default function RiskList({ forecast, onFocus, limit = 10 }: Props) {
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.country}>
+            <tr key={r.country} data-selected={selected === r.country}>
               <td>
-                {r.centroid ? (
-                  <button
-                    type="button"
-                    className="linklike"
-                    onClick={() => onFocus(r.centroid as [number, number, number])}
-                    title={`Show ${r.country} on the map`}
-                  >
-                    {r.country}
-                  </button>
-                ) : (
-                  r.country
-                )}
+                <button
+                  type="button"
+                  className="linklike"
+                  onClick={() => onSelect(r.country, r.centroid)}
+                  title={`Show ${r.country} on the map`}
+                  aria-pressed={selected === r.country}
+                >
+                  {r.country}
+                </button>
               </td>
               <td>
                 <div className="prob-track">

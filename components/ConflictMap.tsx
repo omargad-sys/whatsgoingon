@@ -10,7 +10,7 @@ import maplibregl, {
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { BASEMAP, HEAT_RAMP, INK, SEVERITY_COLORS, SURFACE, type Mode } from "@/lib/mapTheme";
-import type { EventCollection, WorldHeat } from "@/lib/types";
+import type { EventCollection, EventProps, WorldHeat } from "@/lib/types";
 
 const HEAT_SOURCE = "conflict-heat";
 const EVENT_SOURCE = "conflict-events";
@@ -32,6 +32,11 @@ interface Props {
   filters: MapFilters;
   mode: Mode;
   focus?: [number, number, number] | null;
+  /** Country selected in the risk list; its events are emphasised. */
+  highlight?: string | null;
+  /** country -> escalation probability, shown on hover. */
+  probabilities?: Record<string, number>;
+  onPickCountry?: (country: string) => void;
 }
 
 type PointCollection = {
@@ -115,12 +120,28 @@ function popupNode(p: Record<string, unknown>): HTMLElement {
   return root;
 }
 
-export default function ConflictMap({ heat, events, filters, mode, focus }: Props) {
+export default function ConflictMap({
+  heat,
+  events,
+  filters,
+  mode,
+  focus,
+  highlight,
+  probabilities,
+  onPickCountry,
+}: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
   const ready = useRef(false);
   const popup = useRef<MapLibrePopup | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [hover, setHover] = useState<{ x: number; y: number; p: EventProps } | null>(null);
+  // Read inside map event handlers, which are bound once and would otherwise
+  // close over the first render's props forever.
+  const highlightRef = useRef<string | null>(highlight ?? null);
+  highlightRef.current = highlight ?? null;
+  const onPickCountryRef = useRef<((c: string) => void) | undefined>(onPickCountry);
+  onPickCountryRef.current = onPickCountry;
 
   const heatData = useMemo(
     () => heatToGeoJSON(heat, filters.from, filters.to),
@@ -268,13 +289,26 @@ export default function ConflictMap({ heat, events, filters, mode, focus }: Prop
       instance.on("mouseenter", EVENT_LAYER, () => {
         instance.getCanvas().style.cursor = "pointer";
       });
+      instance.on("mousemove", EVENT_LAYER, (e: MapLayerMouseEvent) => {
+        const f = e.features?.[0];
+        if (!f) return;
+        setHover({
+          x: (e as unknown as { point: { x: number; y: number } }).point.x,
+          y: (e as unknown as { point: { x: number; y: number } }).point.y,
+          p: f.properties as unknown as EventProps,
+        });
+      });
       instance.on("mouseleave", EVENT_LAYER, () => {
         instance.getCanvas().style.cursor = "";
+        setHover(null);
       });
       instance.on("click", EVENT_LAYER, (e: MapLayerMouseEvent) => {
         const f = e.features?.[0];
         if (!f) return;
         popup.current?.remove();
+        const country = (f.properties as { c?: string }).c;
+        if (country) onPickCountryRef.current?.(country);
+
         const created = new maplibregl.Popup({ closeButton: true, maxWidth: "260px" })
           .setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number])
           .setDOMContent(popupNode(f.properties as Record<string, unknown>))
@@ -334,6 +368,29 @@ export default function ConflictMap({ heat, events, filters, mode, focus }: Prop
     else instance.once("load", apply);
   }, [eventData]);
 
+  // Selection styling. Repainting is cheaper than refiltering the source, and it
+  // keeps the unselected events visible as context rather than deleting them.
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance) return;
+    const apply = () => {
+      if (!instance.getLayer(EVENT_LAYER)) return;
+      const opacity = highlight
+        ? (["case", ["==", ["get", "c"], highlight], 0.95, 0.12] as unknown as number)
+        : 0.9;
+      instance.setPaintProperty(EVENT_LAYER, "circle-opacity", opacity);
+      instance.setPaintProperty(
+        EVENT_LAYER,
+        "circle-stroke-opacity",
+        highlight
+          ? (["case", ["==", ["get", "c"], highlight], 1, 0.12] as unknown as number)
+          : 1,
+      );
+    };
+    if (ready.current) apply();
+    else instance.once("load", apply);
+  }, [highlight]);
+
   useEffect(() => {
     if (!map.current || !focus) return;
     const [lon, lat, spread] = focus;
@@ -360,6 +417,29 @@ export default function ConflictMap({ heat, events, filters, mode, focus }: Prop
         aria-label="Conflict event map"
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
       />
+      {hover && (
+        <div
+          className="map-hover"
+          style={{ left: hover.x + 14, top: hover.y + 14 }}
+          aria-hidden="true"
+        >
+          <strong>{hover.p.c}</strong>
+          {probabilities?.[hover.p.c] !== undefined && (
+            <span className="muted">
+              {" "}
+              · escalation p {probabilities[hover.p.c].toFixed(2)}
+            </span>
+          )}
+          <div className="muted">
+            {hover.p.s || hover.p.t} · {hover.p.d} ·{" "}
+            {hover.p.f === 1 ? "1 fatality" : `${hover.p.f} fatalities`}
+          </div>
+          <div className="muted" style={{ fontSize: 11 }}>
+            Click to filter the map to this country
+          </div>
+        </div>
+      )}
+
       {failure && (
         <div className="map-failure" role="alert">
           <strong>The map isn&apos;t rendering.</strong>
