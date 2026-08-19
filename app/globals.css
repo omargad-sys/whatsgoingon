@@ -135,11 +135,20 @@ select {
 
 /* ------------------------------------------------------------------ shell */
 
+/* Flex column, not a two-row grid. The banners above .body are conditional, so
+   a fixed `grid-template-rows: auto 1fr` silently pushed .body into an implicit
+   auto row whenever one appeared. Flex handles any number of preceding children
+   and always gives the remainder to .body. */
 .shell {
-  display: grid;
-  grid-template-rows: auto 1fr;
+  display: flex;
+  flex-direction: column;
   height: 100dvh;
   overflow: hidden;
+}
+
+.shell > .topbar,
+.shell > .banner {
+  flex: 0 0 auto;
 }
 
 .topbar {
@@ -226,12 +235,17 @@ select {
 .body {
   display: grid;
   grid-template-columns: 1fr 380px;
+  /* flex-basis 0 plus grow makes this take exactly the leftover height rather
+     than sizing to its own content, and min-height 0 lets it shrink below that
+     content so the sidebar scrolls instead of stretching the row. */
+  flex: 1 1 0;
   min-height: 0;
 }
 
 .map-pane {
   position: relative;
   min-height: 0;
+  height: 100%;
   background: var(--plane);
 }
 

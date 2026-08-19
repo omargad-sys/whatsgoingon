@@ -137,6 +137,21 @@ export default function ConflictMap({ heat, events, filters, mode, focus }: Prop
   useEffect(() => {
     if (!container.current || map.current) return;
 
+    // Belt and braces on top of the inline style: set the geometry imperatively
+    // with the important flag, which sits at the top of the cascade and cannot
+    // be beaten by any stylesheet, including one using !important itself. This
+    // element having a definite size is load-bearing, and it has silently lost
+    // that size once already.
+    const el = container.current;
+    for (const [prop, value] of [
+      ["position", "absolute"],
+      ["inset", "0"],
+      ["width", "100%"],
+      ["height", "100%"],
+    ] as const) {
+      el.style.setProperty(prop, value, "important");
+    }
+
     const instance = new maplibregl.Map({
       container: container.current,
       style: BASEMAP[mode],
@@ -317,7 +332,20 @@ export default function ConflictMap({ heat, events, filters, mode, focus }: Prop
 
   return (
     <>
-      <div className="map-root" ref={container} role="application" aria-label="Conflict event map" />
+      {/* Sizing lives in an inline style, not a stylesheet, on purpose.
+          MapLibre stamps `maplibregl-map` onto this element and its own CSS sets
+          `position: relative` there. Any class-based rule of ours ties on
+          specificity, so the winner comes down to bundle order, which we do not
+          control. An inline declaration beats every stylesheet rule regardless of
+          order. This element must have a definite size or the map renders nothing,
+          so it does not get to depend on load order. */}
+      <div
+        className="map-root"
+        ref={container}
+        role="application"
+        aria-label="Conflict event map"
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+      />
       {failure && (
         <div className="map-failure" role="alert">
           <strong>The map isn&apos;t rendering.</strong>
