@@ -204,3 +204,111 @@ export function toThemeImpactShape(im: ChainedThemeImpact): ThemeImpact {
     })),
   };
 }
+
+/* ------------------------------------------------------- holdings-first view */
+
+export interface ThemeDriver {
+  theme: ThemeId;
+  contribution: number;
+}
+
+export interface HoldingOutlook {
+  ticker: string;
+  weight: number;
+  /** Expected return for this ticker over the forecast horizon. */
+  expected?: number;
+  se?: number;
+  /** Which themes drove it, largest absolute contribution first. */
+  drivers: ThemeDriver[];
+  /** Why there is no number, when there isn't one. */
+  blocked: "none" | "no-link" | "no-sensitivity";
+}
+
+/**
+ * Reorganises the chain by ticker instead of by theme.
+ *
+ * The theme-first view answers "what does Middle East conflict do to markets",
+ * which is the analyst's question. Someone looking at their own portfolio is
+ * asking "what happens to the things I own", and reorganising the same numbers
+ * around that question is most of the difference between the tool feeling
+ * legible and feeling like a stats dump.
+ *
+ * `global` is excluded because it overlaps every regional theme by construction
+ * and would double count.
+ */
+export function holdingOutlooks(
+  holdings: Holding[],
+  themes: ThemeId[],
+  lookup: PairLookup,
+  forecast: Forecast,
+  link: Link,
+  allCountries: string[],
+): HoldingOutlook[] {
+  const regional = themes.filter((t) => t !== "global");
+  const shocks = new Map<ThemeId, ThemeForecast>();
+  for (const t of regional) {
+    shocks.set(t, themeForecast(forecast, link, t, allCountries));
+  }
+
+  const total = holdings.reduce((s, h) => s + (h.weight > 0 ? h.weight : 0), 0);
+
+  return holdings.map((h) => {
+    const weight = total > 0 ? h.weight / total : 0;
+    const drivers: ThemeDriver[] = [];
+    let expected = 0;
+    let variance = 0;
+    let sawLink = false;
+    let sawPair = false;
+
+    for (const theme of regional) {
+      const tf = shocks.get(theme);
+      if (!tf?.linkOk || tf.expectedShock === undefined) continue;
+      sawLink = true;
+
+      const pair = lookup.get(h.ticker, theme);
+      if (!pair || !pair.significant) continue;
+      sawPair = true;
+
+      const z = tf.expectedShock;
+      const contribution = pair.beta * z;
+      expected += contribution;
+      variance +=
+        z * z * pair.se * pair.se + pair.beta * pair.beta * (tf.shockSe ?? 0) ** 2;
+      drivers.push({ theme, contribution });
+    }
+
+    drivers.sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
+
+    if (!sawPair) {
+      return {
+        ticker: h.ticker,
+        weight,
+        drivers: [],
+        blocked: sawLink ? "no-sensitivity" : "no-link",
+      };
+    }
+
+    return {
+      ticker: h.ticker,
+      weight,
+      expected,
+      se: Math.sqrt(variance),
+      drivers,
+      blocked: "none",
+    };
+  });
+}
+
+/** Portfolio total from the holdings view, so the headline and the rows agree. */
+export function portfolioOutlook(outlooks: HoldingOutlook[]) {
+  let value = 0;
+  let covered = 0;
+  let measured = 0;
+  for (const o of outlooks) {
+    if (o.expected === undefined) continue;
+    value += o.weight * o.expected;
+    covered += o.weight;
+    measured += 1;
+  }
+  return { value, covered, measured, total: outlooks.length };
+}

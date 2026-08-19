@@ -9,7 +9,15 @@
 
 import { expect, test } from "bun:test";
 
-import { chainAll, chainTheme, chainedTotal, rankedRisk, themeForecast } from "./chain";
+import {
+  chainAll,
+  chainTheme,
+  chainedTotal,
+  holdingOutlooks,
+  portfolioOutlook,
+  rankedRisk,
+  themeForecast,
+} from "./chain";
 import { buildLookup } from "./exposure";
 import type { Forecast, Link, Sensitivities, ThemeId } from "./types";
 
@@ -205,4 +213,113 @@ test("risk ranking is descending and respects the limit", () => {
   expect(r).toHaveLength(2);
   expect(r[0].country).toBe("Iraq");
   expect(r[1].country).toBe("Russia");
+});
+
+/* ------------------------------------------------- holdings-first view */
+
+test("a holding sums across regional themes but never the global one", () => {
+  const lookup = buildLookup(
+    sens([
+      { ticker: "XLE", theme: "oil_supply", beta: 0.02 },
+      { ticker: "XLE", theme: "mena", beta: 0.01 },
+      { ticker: "XLE", theme: "global", beta: 0.09 },
+    ]),
+  );
+  const [o] = holdingOutlooks(
+    [{ ticker: "XLE", weight: 1 }],
+    ["oil_supply", "mena", "global"],
+    lookup,
+    forecast({ Iran: 0.5, Iraq: 0.5, Lebanon: 0.5, Syria: 0.5 }),
+    link({
+      oil_supply: { intercept: 0, slope: 2 },
+      mena: { intercept: 0, slope: 2 },
+      global: { intercept: 0, slope: 2 },
+    }),
+    ALL,
+  );
+  // shock is 1.0 sigma for each region: 0.02 + 0.01, with global's 0.09 excluded
+  expect(o.expected).toBeCloseTo(0.03, 10);
+  expect(o.drivers.map((d) => d.theme)).toEqual(["oil_supply", "mena"]);
+});
+
+test("drivers are ordered by absolute contribution, not signed", () => {
+  const lookup = buildLookup(
+    sens([
+      { ticker: "XLE", theme: "oil_supply", beta: 0.005 },
+      { ticker: "XLE", theme: "mena", beta: -0.04 },
+    ]),
+  );
+  const [o] = holdingOutlooks(
+    [{ ticker: "XLE", weight: 1 }],
+    ["oil_supply", "mena"],
+    lookup,
+    forecast({ Iran: 0.5, Iraq: 0.5, Lebanon: 0.5, Syria: 0.5 }),
+    link({ oil_supply: { intercept: 0, slope: 2 }, mena: { intercept: 0, slope: 2 } }),
+    ALL,
+  );
+  expect(o.drivers[0].theme).toBe("mena");
+});
+
+test("a holding with no identified sensitivity is blocked, not zeroed", () => {
+  const [o] = holdingOutlooks(
+    [{ ticker: "VOO", weight: 1 }],
+    ["oil_supply"],
+    buildLookup(sens([{ ticker: "VOO", significant: false, tstat: 0.4 }])),
+    forecast({ Iran: 0.5 }),
+    link({ oil_supply: {} }),
+    ALL,
+  );
+  expect(o.expected).toBeUndefined();
+  expect(o.blocked).toBe("no-sensitivity");
+});
+
+test("a broken link is reported as such, distinct from a missing sensitivity", () => {
+  const [o] = holdingOutlooks(
+    [{ ticker: "XLE", weight: 1 }],
+    ["oil_supply"],
+    buildLookup(sens([{}])),
+    forecast({ Iran: 0.5 }),
+    link({ oil_supply: { significant: false, tstat: 0.9 } }),
+    ALL,
+  );
+  expect(o.blocked).toBe("no-link");
+});
+
+test("portfolio total weights holdings and reports its own coverage", () => {
+  const lookup = buildLookup(
+    sens([
+      { ticker: "XLE", theme: "oil_supply", beta: 0.02 },
+      { ticker: "VOO", theme: "oil_supply", significant: false, tstat: 0.3 },
+    ]),
+  );
+  const outlooks = holdingOutlooks(
+    [
+      { ticker: "XLE", weight: 25 },
+      { ticker: "VOO", weight: 75 },
+    ],
+    ["oil_supply"],
+    lookup,
+    forecast({ Iran: 0.5, Iraq: 0.5 }),
+    link({ oil_supply: { intercept: 0, slope: 2 } }),
+    ALL,
+  );
+  const total = portfolioOutlook(outlooks);
+  // only XLE contributes, at its renormalised 25% weight
+  expect(total.value).toBeCloseTo(0.25 * 0.02, 10);
+  expect(total.measured).toBe(1);
+  expect(total.total).toBe(2);
+  expect(total.covered).toBeCloseTo(0.25, 10);
+});
+
+test("a portfolio with nothing identified reports zero measured, not a zero return", () => {
+  const outlooks = holdingOutlooks(
+    [{ ticker: "VOO", weight: 1 }],
+    ["oil_supply"],
+    buildLookup(sens([{ ticker: "VOO", significant: false, tstat: 0.2 }])),
+    forecast({ Iran: 0.5 }),
+    link({ oil_supply: {} }),
+    ALL,
+  );
+  expect(portfolioOutlook(outlooks).measured).toBe(0);
+  expect(outlooks[0].expected).toBeUndefined();
 });

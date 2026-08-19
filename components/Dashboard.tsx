@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 
 import ChainPanel from "./ChainPanel";
 import ExposureTable from "./ExposureTable";
+import HoldingsImpact from "./HoldingsImpact";
 import ImpactBars from "./ImpactBars";
 import PortfolioBuilder from "./PortfolioBuilder";
 import RiskList from "./RiskList";
@@ -14,10 +15,10 @@ import TimeSlider from "./TimeSlider";
 import type { MapFilters } from "./ConflictMap";
 
 import { allThemeImpacts, buildLookup } from "@/lib/exposure";
-import { chainAll, chainedTotal, toThemeImpactShape } from "@/lib/chain";
+import { chainAll, holdingOutlooks, portfolioOutlook, toThemeImpactShape } from "@/lib/chain";
 import { SEVERITY_BANDS, THEMES, THEME_ORDER, TICKER_LIST } from "@/lib/themes";
 import { HEAT_RAMP } from "@/lib/mapTheme";
-import { bps, decodeHoldings, encodeHoldings, relativeAge } from "@/lib/format";
+import { decodeHoldings, encodeHoldings, relativeAge } from "@/lib/format";
 import type {
   CountryMonthly,
   EventCollection,
@@ -156,7 +157,13 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
     () => (selectedChain ? toThemeImpactShape(selectedChain) : undefined),
     [selectedChain],
   );
-  const forecastTotal = useMemo(() => chainedTotal(chained), [chained]);
+  // The holdings-first view is the primary one now; the theme-first chain stays
+  // available underneath for anyone who wants the mechanism.
+  const outlooks = useMemo(
+    () => holdingOutlooks(holdings, THEME_ORDER, lookup, forecast, link, allCountries),
+    [holdings, lookup, forecast, link, allCountries],
+  );
+  const portfolio = useMemo(() => portfolioOutlook(outlooks), [outlooks]);
 
   /* -------------------------------------------------------------- map */
 
@@ -336,38 +343,37 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
 
         <aside className="side">
           <section className="section">
-            <h2>Right now</h2>
-            <div className="stat-row">
-              <div className="stat">
-                <div className="k">Portfolio, {forecast.target_month.slice(0, 7)}</div>
-                <div className="v">
-                  {forecastTotal.themesCounted === 0 ? (
-                    <span className="null-note" style={{ fontSize: 13 }}>
-                      not identified
-                    </span>
-                  ) : (
-                    bps(forecastTotal.value)
-                  )}
-                </div>
-              </div>
-              <div className="stat">
-                <div className="k">{THEMES[theme].label}</div>
-                <div className="v small">
-                  {!selectedChain || selectedChain.empty ? (
-                    <span className="null-note" style={{ fontSize: 13 }}>
-                      not identified
-                    </span>
-                  ) : (
-                    bps(selectedChain.expectedReturn)
-                  )}
-                </div>
-              </div>
+            <h2>Your portfolio · {forecast.target_month.slice(0, 7)}</h2>
+            <div className="headline">
+              {portfolio.measured === 0 ? (
+                <span className="null-note" style={{ fontSize: 17 }}>
+                  Nothing measurable
+                </span>
+              ) : (
+                <span className={portfolio.value >= 0 ? "up" : "down"}>
+                  {portfolio.value > 0 ? "+" : portfolio.value < 0 ? "\u2212" : ""}
+                  {Math.abs(portfolio.value * 100).toFixed(2)}%
+                </span>
+              )}
             </div>
             <p className="hint" style={{ marginBottom: 0 }}>
-              Expected return for {forecast.target_month.slice(0, 7)}, from conflict
-              escalation risk alone, summed over regional themes. This is a conditional
-              estimate, not a price target, and not investment advice. Conflict data as
-              of {forecast.as_of_month.slice(0, 7)}, refreshed{" "}
+              {portfolio.measured === 0 ? (
+                <>
+                  None of your holdings has a measurable response to conflict in these
+                  regions. That is a real finding, not a gap.
+                </>
+              ) : (
+                <>
+                  Estimated effect on your portfolio during{" "}
+                  {forecast.target_month.slice(0, 7)} from conflict escalation risk alone.{" "}
+                  {portfolio.measured} of {portfolio.total} holdings responded measurably,
+                  covering {Math.round(portfolio.covered * 100)}% of your weight. Everything
+                  else that moves markets is excluded. Not investment advice.
+                </>
+              )}
+            </p>
+            <p className="hint" style={{ margin: "8px 0 0", fontSize: 11.5 }}>
+              Conflict data as of {forecast.as_of_month.slice(0, 7)}, refreshed{" "}
               {relativeAge(manifest.generated_at)}.
             </p>
           </section>
@@ -402,7 +408,12 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
           </section>
 
           <section className="section">
-            <h2>Your portfolio</h2>
+            <h2>How each holding is affected</h2>
+            <HoldingsImpact outlooks={outlooks} month={forecast.target_month.slice(0, 7)} />
+          </section>
+
+          <section className="section">
+            <h2>Edit holdings</h2>
             <p className="hint">
               Weights are renormalised to 100%. The URL updates as you edit, so the link
               is shareable.
@@ -411,30 +422,51 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
           </section>
 
           <section className="section">
-            <h2>How {THEMES[theme].label} reaches your portfolio</h2>
-            {selectedChain && (
-              <ChainPanel impact={selectedChain} forecast={forecast} link={link} />
-            )}
-          </section>
+            <details className="folded">
+              <summary>How this number is built</summary>
+              <div>
+                <div className="row-actions" style={{ marginTop: 0, flexWrap: "wrap" }}>
+                  {THEME_ORDER.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      className="pill"
+                      aria-pressed={theme === t}
+                      onClick={() => onSelectTheme(t)}
+                    >
+                      {THEMES[t].label}
+                    </button>
+                  ))}
+                </div>
+                {selectedChain && (
+                  <ChainPanel impact={selectedChain} forecast={forecast} link={link} />
+                )}
+              </div>
+            </details>
 
-          <section className="section">
-            <h2>Sensitivity per +1σ shock</h2>
-            <p className="hint">
-              The middle layer on its own: what a one standard deviation escalation would
-              do, independent of how likely one is.
-            </p>
-            <ImpactBars impacts={perSigma} hasHoldings={holdings.length > 0} />
-          </section>
+            <details className="folded">
+              <summary>Sensitivity to a 1σ shock, all regions</summary>
+              <div>
+                <p className="hint">
+                  The middle layer on its own: what a one standard deviation escalation
+                  would do, independent of how likely one is.
+                </p>
+                <ImpactBars impacts={perSigma} hasHoldings={holdings.length > 0} />
+              </div>
+            </details>
 
-          <section className="section">
-            <h2>By holding</h2>
-            {selectedImpact && (
-              <ExposureTable
-                impact={selectedImpact}
-                themes={THEME_ORDER}
-                onThemeChange={onSelectTheme}
-              />
-            )}
+            <details className="folded">
+              <summary>Per-holding coefficients and t-statistics</summary>
+              <div>
+                {selectedImpact && (
+                  <ExposureTable
+                    impact={selectedImpact}
+                    themes={THEME_ORDER}
+                    onThemeChange={onSelectTheme}
+                  />
+                )}
+              </div>
+            </details>
           </section>
 
           <footer className="footer">
