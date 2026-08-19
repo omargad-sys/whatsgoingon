@@ -33,6 +33,44 @@ def _load_fixture():
     return pd.read_csv(FIXTURE_DIR / "events_sample.csv")
 
 
+# Countries with enough activity that any month they serve will contain events.
+# Used only to find where the data actually ends.
+PROBE = ("Ukraine", "Mexico", "Yemen", "Myanmar")
+
+
+def discover_latest(token, max_years_back=4):
+    """Find the most recent event date this account can actually see.
+
+    ACLED's Research tier serves lagged data, so "today minus 180 days" can sit
+    entirely past the end of what the account is allowed to read. The first
+    production run of this pipeline requested 2026-02-19..2026-08-18, got zero
+    rows for all 51 countries, and exited 1 after 50 minutes of fetching. The
+    window has to come from the data, not from the calendar.
+    """
+    from fetch_events import fetch_events
+
+    today = pd.Timestamp(dt.date.today())
+    for back in range(max_years_back):
+        year = today.year - back
+        latest = None
+        for country in PROBE:
+            df = fetch_events(token, country, year)
+            if not len(df):
+                continue
+            d = pd.to_datetime(df["event_date"], errors="coerce").max()
+            if pd.notna(d) and (latest is None or d > latest):
+                latest = d
+        if latest is not None:
+            if back > 0:
+                print(f"  note: no data for {today.year}; latest available is {latest:%Y-%m-%d}")
+            return latest
+    raise SystemExit(
+        "Could not find any events in the last "
+        f"{max_years_back} years for {', '.join(PROBE)}.\n"
+        "Credentials work but the account appears to have no event-level access."
+    )
+
+
 def _load_from_api(countries, start, end):
     from fetch_events import fetch_events_between, get_token
 
@@ -44,7 +82,11 @@ def _load_from_api(countries, start, end):
         if len(df):
             frames.append(df)
     if not frames:
-        raise SystemExit("No events returned. Check credentials and access tier.")
+        raise SystemExit(
+            f"No events returned for {start}..{end} across {len(countries)} countries.\n"
+            "That window is almost certainly past the end of what this account can\n"
+            "read. Run `python check_coverage.py` to see the real cutoff."
+        )
     return pd.concat(frames, ignore_index=True)
 
 
@@ -171,14 +213,24 @@ def main():
     args = ap.parse_args()
 
     ensure_dirs()
-    end = pd.Timestamp(dt.date.today())
-    start = end - pd.Timedelta(days=args.days)
 
     if args.fixture:
+        end = pd.Timestamp(dt.date.today())
+        start = end - pd.Timedelta(days=args.days)
         raw = _load_fixture()
     elif args.cache_only:
+        end = pd.Timestamp(dt.date.today())
+        start = end - pd.Timedelta(days=args.days)
         raw = _load_from_cache(start, end)
     else:
+        from fetch_events import get_token
+
+        # Anchor the window on the newest event the account can see, not on
+        # today. Costs a handful of probe requests and saves the whole run.
+        token = get_token()
+        end = discover_latest(token)
+        start = end - pd.Timedelta(days=args.days)
+        print(f"\nWindow: {start:%Y-%m-%d} to {end:%Y-%m-%d}")
         raw = _load_from_api(COUNTRIES, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
 
     df = clean(raw)
