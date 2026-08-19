@@ -21,8 +21,10 @@ export interface EventProps {
   s: string;
   /** country */
   c: string;
-  /** location */
+  /** location (town or village) */
   l: string;
+  /** admin1 (province or state); may be absent in older artifacts */
+  a?: string;
   /** fatalities */
   f: number;
 }

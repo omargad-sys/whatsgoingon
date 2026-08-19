@@ -196,6 +196,10 @@ def build_top_events(df, week_idx, limit=TOP_EVENTS):
                     "s": str(getattr(row, "sub_event_type", "") or ""),
                     "c": str(getattr(row, "country", "") or ""),
                     "l": str(getattr(row, "location", "") or ""),
+                    # admin1 is the province/state. ACLED's `location` is often a
+                    # village nobody outside the country recognises, so without
+                    # this the popup reads "Kafr Nabl, Syria" and means nothing.
+                    "a": str(getattr(row, "admin1", "") or ""),
                     "f": int(row.fatalities),
                 },
             }

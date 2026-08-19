@@ -101,7 +101,10 @@ function popupNode(p: Record<string, unknown>): HTMLElement {
 
   const where = document.createElement("div");
   where.style.opacity = "0.75";
-  where.textContent = [p.l, p.c].filter(Boolean).join(", ");
+  // town, province, country. Deduplicated because ACLED often repeats the town
+  // name as its own admin1 for city-states and capital districts.
+  const parts = [p.l, p.a, p.c].map((v) => String(v ?? "").trim()).filter(Boolean);
+  where.textContent = parts.filter((v, i) => parts.indexOf(v) === i).join(", ");
   root.appendChild(where);
 
   const when = document.createElement("div");
@@ -429,6 +432,11 @@ export default function ConflictMap({
               {" "}
               · escalation p {probabilities[hover.p.c].toFixed(2)}
             </span>
+          )}
+          {hover.p.l && (
+            <div className="muted" style={{ fontSize: 11.5 }}>
+              {[hover.p.l, hover.p.a].filter(Boolean).join(", ")}
+            </div>
           )}
           <div className="muted">
             {hover.p.s || hover.p.t} · {hover.p.d} ·{" "}
