@@ -259,10 +259,13 @@ z     = (shock − rolling_mean(shock, 36)) / rolling_std(shock, 36)`}</code>
         ))}
       </ul>
       <p>
-        Themes overlap on purpose: Iran sits in both oil supply and MENA. That means
-        their impacts must not be added together, which is why the portfolio headline
-        excludes the global theme and treats the regional ones as separate readings
-        rather than a portfolio-wide total.
+        There are two kinds of theme, and the difference matters for the arithmetic.
+        The six regional themes form a <strong>partition</strong>: every country in
+        the universe belongs to exactly one of them, so their effects can be added
+        into a portfolio total without counting any country twice. Oil supply and
+        Global are <strong>overlays</strong>: they cut across regions, so Iran would
+        be counted once as a Gulf producer and again as a MENA country. Overlays are
+        estimated and displayed on their own, and never enter a total.
       </p>
 
       <h2>The regression</h2>

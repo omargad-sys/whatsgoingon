@@ -1,4 +1,5 @@
 import type { Holding, SensitivityPair, Sensitivities, ThemeId } from "./types";
+import { PARTITION_THEMES } from "./themes";
 
 /**
  * The overlay math, and the guardrail that gives it whatever credibility it has.
@@ -115,10 +116,12 @@ export function totalCurrentImpact(
 ): { value: number; themesCounted: number } {
   let value = 0;
   let themesCounted = 0;
+  // Only the partition is summable. Overlay themes (`oil_supply`, `global`)
+  // share countries with the regions, so adding them would count Iran once as
+  // a Gulf producer and again as a MENA country.
+  const summable = new Set<ThemeId>(PARTITION_THEMES);
   for (const im of impacts) {
-    // `global` overlaps every regional theme by construction; summing it with
-    // the regions would double count the same events.
-    if (im.theme === "global") continue;
+    if (!summable.has(im.theme)) continue;
     const v = currentImpact(im, currentShock);
     if (v === undefined || im.empty) continue;
     value += v;

@@ -207,10 +207,13 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
     // Rough framing for the theme's region. Deliberately approximate: the point
     // is to get the reader looking at the right part of the world.
     const framing: Record<ThemeId, [number, number, number] | null> = {
-      oil_supply: [45, 22, 18],
-      eastern_europe: [33, 49, 9],
       mena: [38, 31, 12],
+      eastern_europe: [33, 49, 9],
       east_asia: [118, 28, 16],
+      south_central_asia: [72, 30, 11],
+      sub_saharan: [22, 5, 9],
+      latin_america: [-70, 0, 8],
+      oil_supply: [45, 22, 18],
       global: null,
     };
     setFocus(framing[t]);

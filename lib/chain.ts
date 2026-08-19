@@ -1,4 +1,4 @@
-import { THEMES } from "./themes";
+import { PARTITION_THEMES, THEMES } from "./themes";
 import type { PairLookup, ThemeImpact } from "./exposure";
 import type { Forecast, Holding, Link, ThemeId } from "./types";
 
@@ -154,15 +154,17 @@ export function chainAll(
   return themes.map((t) => chainTheme(holdings, t, lookup, forecast, link, allCountries));
 }
 
-/** Portfolio total, excluding `global` because it double counts the regions. */
+/** Portfolio total over the disjoint regions only. Overlay themes such as
+ *  oil supply share countries with the regions and would double count. */
 export function chainedTotal(impacts: ChainedThemeImpact[]): {
   value: number;
   themesCounted: number;
 } {
+  const summable = new Set<ThemeId>(PARTITION_THEMES);
   let value = 0;
   let themesCounted = 0;
   for (const im of impacts) {
-    if (im.theme === "global" || im.empty) continue;
+    if (!summable.has(im.theme) || im.empty) continue;
     value += im.expectedReturn;
     themesCounted += 1;
   }
@@ -233,8 +235,9 @@ export interface HoldingOutlook {
  * around that question is most of the difference between the tool feeling
  * legible and feeling like a stats dump.
  *
- * `global` is excluded because it overlaps every regional theme by construction
- * and would double count.
+ * Only partition themes are summed. They are disjoint and cover the universe,
+ * so no country contributes twice. Overlay themes such as oil supply are shown
+ * on their own but never added in.
  */
 export function holdingOutlooks(
   holdings: Holding[],
@@ -244,7 +247,11 @@ export function holdingOutlooks(
   link: Link,
   allCountries: string[],
 ): HoldingOutlook[] {
-  const regional = themes.filter((t) => t !== "global");
+  // Only the disjoint regions. Overlay themes share member countries with them,
+  // so adding oil_supply to mena would count Iran, Iraq and Yemen twice. That is
+  // exactly what an earlier version of this did.
+  const summable = new Set<ThemeId>(PARTITION_THEMES);
+  const regional = themes.filter((t) => summable.has(t));
   const shocks = new Map<ThemeId, ThemeForecast>();
   for (const t of regional) {
     shocks.set(t, themeForecast(forecast, link, t, allCountries));

@@ -17,7 +17,7 @@ from build_sensitivities import benjamini_hochberg  # noqa: E402
 from build_snapshot import build_heat, build_top_events, clean, week_starts  # noqa: E402
 from intensity import theme_levels, theme_shocks  # noqa: E402
 from ols import ols_hac  # noqa: E402
-from universe import COUNTRIES, THEMES, TICKERS  # noqa: E402
+from universe import COUNTRIES, PARTITION_THEMES, THEMES, TICKERS  # noqa: E402
 
 
 def sample_events():
@@ -366,3 +366,32 @@ class TestLinkAlignment(unittest.TestCase):
         self.assertNotAlmostEqual(
             links["oil_supply"]["slope"], round(wrong.get("x")["beta"], 6), places=4
         )
+
+
+class TestThemePartition(unittest.TestCase):
+    """The partition is what makes summing theme effects legitimate."""
+
+    def test_partition_themes_are_disjoint(self):
+        seen = {}
+        for theme in PARTITION_THEMES:
+            for country in THEMES[theme]["countries"]:
+                seen.setdefault(country, []).append(theme)
+        doubled = {c: t for c, t in seen.items() if len(t) > 1}
+        self.assertEqual(doubled, {}, f"summing these would double count: {doubled}")
+
+    def test_partition_covers_every_country_exactly_once(self):
+        covered = {c for t in PARTITION_THEMES for c in THEMES[t]["countries"]}
+        self.assertEqual(
+            covered,
+            set(COUNTRIES),
+            "every country must sit in exactly one region, or escalation there "
+            "can top the risk list while being unable to move any portfolio number",
+        )
+
+    def test_overlay_members_also_live_somewhere_in_the_partition(self):
+        covered = {c for t in PARTITION_THEMES for c in THEMES[t]["countries"]}
+        for theme, meta in THEMES.items():
+            if meta["partition"]:
+                continue
+            for country in meta["countries"]:
+                self.assertIn(country, covered, f"{theme} references uncovered {country}")

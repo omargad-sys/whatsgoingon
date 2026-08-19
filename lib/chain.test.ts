@@ -20,6 +20,7 @@ import {
   themeForecast,
 } from "./chain";
 import { buildLookup } from "./exposure";
+import { PARTITION_THEMES, THEMES } from "./themes";
 import type { Forecast, Link, Sensitivities, ThemeId } from "./types";
 
 const ALL = ["Iran", "Iraq", "Saudi Arabia", "Ukraine", "Russia"];
@@ -65,7 +66,7 @@ function sens(pairs: Partial<Sensitivities["pairs"][number]>[]): Sensitivities {
     sample: { start: null, end: null, n_pairs: pairs.length, n_significant: 0 },
     current_shock: {},
     pairs: pairs.map((p) => ({
-      ticker: "XLE", theme: "oil_supply" as ThemeId, beta: 0.01, se: 0.002,
+      ticker: "XLE", theme: "mena" as ThemeId, beta: 0.01, se: 0.002,
       tstat: 5, pvalue: 0, beta_lag: 0, tstat_lag: 0, r2: 0.3, n: 80,
       controlled: true, passes_tstat: true, passes_fdr: true, significant: true,
       ...p,
@@ -75,7 +76,7 @@ function sens(pairs: Partial<Sensitivities["pairs"][number]>[]): Sensitivities {
 
 test("expected fraction is the mean probability over covered members", () => {
   const f = forecast({ Iran: 0.8, Iraq: 0.4, "Saudi Arabia": 0.0 });
-  const tf = themeForecast(f, link({ oil_supply: {} }), "oil_supply", ALL);
+  const tf = themeForecast(f, link({ mena: {} }), "mena", ALL);
   expect(tf.covered).toBe(3);
   expect(tf.expectedFraction).toBeCloseTo(0.4, 10);
 });
@@ -83,10 +84,10 @@ test("expected fraction is the mean probability over covered members", () => {
 test("countries missing from the forecast are excluded, not treated as zero", () => {
   const withAll = themeForecast(
     forecast({ Iran: 0.9, Iraq: 0.9, "Saudi Arabia": 0.9 }),
-    link({ oil_supply: {} }), "oil_supply", ALL,
+    link({ mena: {} }), "mena", ALL,
   );
   const withOne = themeForecast(
-    forecast({ Iran: 0.9 }), link({ oil_supply: {} }), "oil_supply", ALL,
+    forecast({ Iran: 0.9 }), link({ mena: {} }), "mena", ALL,
   );
   // Dropping members must not dilute the mean toward zero.
   expect(withOne.expectedFraction).toBeCloseTo(withAll.expectedFraction, 10);
@@ -96,18 +97,18 @@ test("countries missing from the forecast are excluded, not treated as zero", ()
 test("expected shock applies intercept and slope", () => {
   const tf = themeForecast(
     forecast({ Iran: 0.5, Iraq: 0.5 }),
-    link({ oil_supply: { intercept: -0.2, slope: 3 } }),
-    "oil_supply", ALL,
+    link({ mena: { intercept: -0.2, slope: 3 } }),
+    "mena", ALL,
   );
   expect(tf.expectedShock).toBeCloseTo(-0.2 + 3 * 0.5, 10);
 });
 
 test("an insignificant link breaks the chain and yields no number", () => {
   const im = chainTheme(
-    [{ ticker: "XLE", weight: 1 }], "oil_supply",
+    [{ ticker: "XLE", weight: 1 }], "mena",
     buildLookup(sens([{}])),
     forecast({ Iran: 0.6 }),
-    link({ oil_supply: { significant: false, tstat: 1.1 } }),
+    link({ mena: { significant: false, tstat: 1.1 } }),
     ALL,
   );
   expect(im.empty).toBe(true);
@@ -117,10 +118,10 @@ test("an insignificant link breaks the chain and yields no number", () => {
 
 test("an insignificant sensitivity breaks the chain even when the link holds", () => {
   const im = chainTheme(
-    [{ ticker: "XLE", weight: 1 }], "oil_supply",
+    [{ ticker: "XLE", weight: 1 }], "mena",
     buildLookup(sens([{ significant: false, tstat: 1.2 }])),
     forecast({ Iran: 0.6 }),
-    link({ oil_supply: {} }),
+    link({ mena: {} }),
     ALL,
   );
   expect(im.empty).toBe(true);
@@ -129,10 +130,10 @@ test("an insignificant sensitivity breaks the chain even when the link holds", (
 
 test("expected return is beta times expected shock", () => {
   const im = chainTheme(
-    [{ ticker: "XLE", weight: 1 }], "oil_supply",
+    [{ ticker: "XLE", weight: 1 }], "mena",
     buildLookup(sens([{ beta: 0.02 }])),
     forecast({ Iran: 0.5, Iraq: 0.5 }),
-    link({ oil_supply: { intercept: 0, slope: 2 } }),
+    link({ mena: { intercept: 0, slope: 2 } }),
     ALL,
   );
   // shock = 0 + 2 * 0.5 = 1.0 sigma; return = 0.02 * 1.0
@@ -141,10 +142,10 @@ test("expected return is beta times expected shock", () => {
 
 test("sign is preserved: a negative beta gives a negative expected return", () => {
   const im = chainTheme(
-    [{ ticker: "VOO", weight: 1 }], "oil_supply",
+    [{ ticker: "VOO", weight: 1 }], "mena",
     buildLookup(sens([{ ticker: "VOO", beta: -0.015 }])),
     forecast({ Iran: 0.5, Iraq: 0.5 }),
-    link({ oil_supply: { intercept: 0, slope: 2 } }),
+    link({ mena: { intercept: 0, slope: 2 } }),
     ALL,
   );
   expect(im.expectedReturn).toBeLessThan(0);
@@ -157,9 +158,9 @@ test("weights are renormalised before contributions are summed", () => {
   );
   const im = chainTheme(
     [{ ticker: "XLE", weight: 30 }, { ticker: "USO", weight: 10 }],
-    "oil_supply", lookup,
+    "mena", lookup,
     forecast({ Iran: 0.5, Iraq: 0.5 }),
-    link({ oil_supply: { intercept: 0, slope: 2 } }),
+    link({ mena: { intercept: 0, slope: 2 } }),
     ALL,
   );
   // 0.75 * 0.02 + 0.25 * 0.04 = 0.025, regardless of the raw weights summing to 40
@@ -169,10 +170,10 @@ test("weights are renormalised before contributions are summed", () => {
 
 test("chained error is larger than either layer's error alone", () => {
   const im = chainTheme(
-    [{ ticker: "XLE", weight: 1 }], "oil_supply",
+    [{ ticker: "XLE", weight: 1 }], "mena",
     buildLookup(sens([{ beta: 0.02, se: 0.005 }])),
     forecast({ Iran: 0.5, Iraq: 0.5 }),
-    link({ oil_supply: { intercept: 0, slope: 2, se: 0.5 } }),
+    link({ mena: { intercept: 0, slope: 2, se: 0.5 } }),
     ALL,
   );
   const shockSe = 0.5 * 0.5; // se * expectedFraction
@@ -184,15 +185,15 @@ test("chained error is larger than either layer's error alone", () => {
 test("the global theme is excluded from the portfolio total", () => {
   const lookup = buildLookup(
     sens([
-      { ticker: "XLE", theme: "oil_supply", beta: 0.02 },
+      { ticker: "XLE", theme: "mena", beta: 0.02 },
       { ticker: "XLE", theme: "global", beta: 0.09 },
     ]),
   );
   const impacts = chainAll(
     [{ ticker: "XLE", weight: 1 }],
-    ["oil_supply", "global"], lookup,
+    ["mena", "global"], lookup,
     forecast({ Iran: 0.5, Iraq: 0.5, Ukraine: 0.5, Russia: 0.5, "Saudi Arabia": 0.5 }),
-    link({ oil_supply: { intercept: 0, slope: 2 }, global: { intercept: 0, slope: 2 } }),
+    link({ mena: { intercept: 0, slope: 2 }, global: { intercept: 0, slope: 2 } }),
     ALL,
   );
   const total = chainedTotal(impacts);
@@ -202,8 +203,8 @@ test("the global theme is excluded from the portfolio total", () => {
 
 test("an empty portfolio produces no numbers rather than zeroes", () => {
   const im = chainTheme(
-    [], "oil_supply", buildLookup(sens([{}])),
-    forecast({ Iran: 0.5 }), link({ oil_supply: {} }), ALL,
+    [], "mena", buildLookup(sens([{}])),
+    forecast({ Iran: 0.5 }), link({ mena: {} }), ALL,
   );
   expect(im.holdings).toHaveLength(0);
   expect(im.empty).toBe(true);
@@ -221,53 +222,53 @@ test("risk ranking is descending and respects the limit", () => {
 test("a holding sums across regional themes but never the global one", () => {
   const lookup = buildLookup(
     sens([
-      { ticker: "XLE", theme: "oil_supply", beta: 0.02 },
-      { ticker: "XLE", theme: "mena", beta: 0.01 },
+      { ticker: "XLE", theme: "mena", beta: 0.02 },
+      { ticker: "XLE", theme: "eastern_europe", beta: 0.01 },
       { ticker: "XLE", theme: "global", beta: 0.09 },
     ]),
   );
   const [o] = holdingOutlooks(
     [{ ticker: "XLE", weight: 1 }],
-    ["oil_supply", "mena", "global"],
+    ["mena", "eastern_europe", "global"],
     lookup,
-    forecast({ Iran: 0.5, Iraq: 0.5, Lebanon: 0.5, Syria: 0.5 }),
+    forecast({ Iran: 0.5, Iraq: 0.5, Ukraine: 0.5, Russia: 0.5 }),
     link({
-      oil_supply: { intercept: 0, slope: 2 },
       mena: { intercept: 0, slope: 2 },
+      eastern_europe: { intercept: 0, slope: 2 },
       global: { intercept: 0, slope: 2 },
     }),
     ALL,
   );
   // shock is 1.0 sigma for each region: 0.02 + 0.01, with global's 0.09 excluded
   expect(o.expected).toBeCloseTo(0.03, 10);
-  expect(o.drivers.map((d) => d.theme)).toEqual(["oil_supply", "mena"]);
+  expect(o.drivers.map((d) => d.theme)).toEqual(["mena", "eastern_europe"]);
 });
 
 test("drivers are ordered by absolute contribution, not signed", () => {
   const lookup = buildLookup(
     sens([
-      { ticker: "XLE", theme: "oil_supply", beta: 0.005 },
-      { ticker: "XLE", theme: "mena", beta: -0.04 },
+      { ticker: "XLE", theme: "mena", beta: 0.005 },
+      { ticker: "XLE", theme: "eastern_europe", beta: -0.04 },
     ]),
   );
   const [o] = holdingOutlooks(
     [{ ticker: "XLE", weight: 1 }],
-    ["oil_supply", "mena"],
+    ["mena", "eastern_europe"],
     lookup,
-    forecast({ Iran: 0.5, Iraq: 0.5, Lebanon: 0.5, Syria: 0.5 }),
-    link({ oil_supply: { intercept: 0, slope: 2 }, mena: { intercept: 0, slope: 2 } }),
+    forecast({ Iran: 0.5, Iraq: 0.5, Ukraine: 0.5, Russia: 0.5 }),
+    link({ mena: { intercept: 0, slope: 2 }, eastern_europe: { intercept: 0, slope: 2 } }),
     ALL,
   );
-  expect(o.drivers[0].theme).toBe("mena");
+  expect(o.drivers[0].theme).toBe("eastern_europe");
 });
 
 test("a holding with no identified sensitivity is blocked, not zeroed", () => {
   const [o] = holdingOutlooks(
     [{ ticker: "VOO", weight: 1 }],
-    ["oil_supply"],
+    ["mena"],
     buildLookup(sens([{ ticker: "VOO", significant: false, tstat: 0.4 }])),
     forecast({ Iran: 0.5 }),
-    link({ oil_supply: {} }),
+    link({ mena: {} }),
     ALL,
   );
   expect(o.expected).toBeUndefined();
@@ -277,10 +278,10 @@ test("a holding with no identified sensitivity is blocked, not zeroed", () => {
 test("a broken link is reported as such, distinct from a missing sensitivity", () => {
   const [o] = holdingOutlooks(
     [{ ticker: "XLE", weight: 1 }],
-    ["oil_supply"],
+    ["mena"],
     buildLookup(sens([{}])),
     forecast({ Iran: 0.5 }),
-    link({ oil_supply: { significant: false, tstat: 0.9 } }),
+    link({ mena: { significant: false, tstat: 0.9 } }),
     ALL,
   );
   expect(o.blocked).toBe("no-link");
@@ -289,8 +290,8 @@ test("a broken link is reported as such, distinct from a missing sensitivity", (
 test("portfolio total weights holdings and reports its own coverage", () => {
   const lookup = buildLookup(
     sens([
-      { ticker: "XLE", theme: "oil_supply", beta: 0.02 },
-      { ticker: "VOO", theme: "oil_supply", significant: false, tstat: 0.3 },
+      { ticker: "XLE", theme: "mena", beta: 0.02 },
+      { ticker: "VOO", theme: "mena", significant: false, tstat: 0.3 },
     ]),
   );
   const outlooks = holdingOutlooks(
@@ -298,10 +299,10 @@ test("portfolio total weights holdings and reports its own coverage", () => {
       { ticker: "XLE", weight: 25 },
       { ticker: "VOO", weight: 75 },
     ],
-    ["oil_supply"],
+    ["mena"],
     lookup,
     forecast({ Iran: 0.5, Iraq: 0.5 }),
-    link({ oil_supply: { intercept: 0, slope: 2 } }),
+    link({ mena: { intercept: 0, slope: 2 } }),
     ALL,
   );
   const total = portfolioOutlook(outlooks);
@@ -315,10 +316,10 @@ test("portfolio total weights holdings and reports its own coverage", () => {
 test("a portfolio with nothing identified reports zero measured, not a zero return", () => {
   const outlooks = holdingOutlooks(
     [{ ticker: "VOO", weight: 1 }],
-    ["oil_supply"],
+    ["mena"],
     buildLookup(sens([{ ticker: "VOO", significant: false, tstat: 0.2 }])),
     forecast({ Iran: 0.5 }),
-    link({ oil_supply: {} }),
+    link({ mena: {} }),
     ALL,
   );
   expect(portfolioOutlook(outlooks).measured).toBe(0);
@@ -355,4 +356,35 @@ test("a country absent from the previous run is skipped, not treated as zero", (
   const f = withPrevious({ Iran: 0.9, Taiwan: 0.8 }, { Iran: 0.85 });
   const m = movers(f, 5, 0.0);
   expect(m.map((x) => x.country)).toEqual(["Iran"]);
+});
+
+test("overlay themes are never added into the portfolio total", () => {
+  const lookup = buildLookup(
+    sens([
+      { ticker: "XLE", theme: "mena", beta: 0.02 },
+      { ticker: "XLE", theme: "oil_supply", beta: 0.05 },
+    ]),
+  );
+  const [o] = holdingOutlooks(
+    [{ ticker: "XLE", weight: 1 }],
+    ["mena", "oil_supply"],
+    lookup,
+    forecast({ Iran: 0.5, Iraq: 0.5 }),
+    link({ mena: { intercept: 0, slope: 2 }, oil_supply: { intercept: 0, slope: 2 } }),
+    ALL,
+  );
+  // Iran and Iraq are in both baskets; counting oil_supply too would double them.
+  expect(o.expected).toBeCloseTo(0.02, 10);
+  expect(o.drivers.map((d) => d.theme)).toEqual(["mena"]);
+});
+
+test("the partition is disjoint and covers the universe", () => {
+  const seen = new Map<string, number>();
+  for (const t of PARTITION_THEMES) {
+    for (const c of THEMES[t].countries) seen.set(c, (seen.get(c) ?? 0) + 1);
+  }
+  const doubled = [...seen.entries()].filter(([, n]) => n > 1);
+  expect(doubled).toEqual([]);
+  // Overlay members must all appear somewhere in the partition.
+  for (const c of THEMES.oil_supply.countries) expect(seen.has(c)).toBe(true);
 });

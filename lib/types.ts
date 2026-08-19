@@ -1,4 +1,4 @@
-export type ThemeId = "oil_supply" | "eastern_europe" | "mena" | "east_asia" | "global";
+export type ThemeId = "mena" | "eastern_europe" | "east_asia" | "south_central_asia" | "sub_saharan" | "latin_america" | "oil_supply" | "global";
 
 /** [weekIndex, lon, lat, events, fatalities] */
 export type HeatCell = [number, number, number, number, number];

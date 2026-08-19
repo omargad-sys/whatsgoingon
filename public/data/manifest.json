@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-08-18T00:56:06+00:00",
+  "generated_at": "2026-08-19T01:52:15+00:00",
   "synthetic": true,
   "window_days": 180,
   "acled": {
     "weeks": 27,
     "first_week": "2026-02-16",
     "last_week": "2026-08-17",
-    "grid_cells": 68861,
+    "grid_cells": 69942,
     "detail_events": 2997,
     "panel_months": 104,
     "panel_countries": 52
@@ -25,24 +25,24 @@
       "XLE"
     ],
     "first_date": "2018-01-01",
-    "last_date": "2026-08-18"
+    "last_date": "2026-08-19"
   },
   "forecast": {
     "as_of_month": "2026-08-01",
     "target_month": "2026-09-01",
     "source": "baseline",
     "backend": "baseline",
-    "model_roc_auc": 0.9438,
-    "baseline_roc_auc": 0.9289,
+    "model_roc_auc": 0.9337,
+    "baseline_roc_auc": 0.9221,
     "countries": 52
   },
   "link": {
-    "themes": 5,
-    "significant": 3
+    "themes": 8,
+    "significant": 1
   },
   "model": {
-    "pairs": 50,
-    "significant": 4,
+    "pairs": 80,
+    "significant": 2,
     "tstat_threshold": 2.0,
     "fdr_q": 0.1
   }

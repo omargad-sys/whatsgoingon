@@ -12,7 +12,7 @@ against what the API actually returns before a full pull.
 COUNTRIES = [
     # Gulf / oil
     "Saudi Arabia", "Iran", "Iraq", "United Arab Emirates", "Kuwait",
-    "Qatar", "Oman", "Bahrain",
+    "Qatar", "Oman", "Bahrain", "Yemen",
     # North Africa / oil
     "Libya", "Algeria", "Egypt", "Tunisia", "Morocco",
     # Other major producers
@@ -34,48 +34,95 @@ COUNTRIES = [
     "Myanmar",
 ]
 
-# A theme is a basket of countries whose conflict intensity is summed into one
-# index. Themes exist because no single country's violence moves a US ETF, but a
-# region-wide supply shock plausibly does.
+# Two kinds of theme, and the distinction is load-bearing.
+#
+# PARTITION themes carve the universe into disjoint regions. Every country
+# belongs to exactly one, so their effects can be summed into a portfolio total
+# without counting any country twice.
+#
+# OVERLAY themes cut across regions (oil supply spans the Gulf and Africa and
+# Latin America; global is everything). They are estimated and displayed, but
+# never added to the total, because doing so would count Iran once as a Gulf
+# producer and again as a MENA country.
+#
+# The earlier version had no such distinction: Iran, Iraq and Yemen were in both
+# oil_supply and mena, so the headline silently overstated them. And only 30 of
+# 52 countries belonged to any theme at all, so escalation in Mozambique or
+# Mexico could top the risk list while being structurally unable to move a
+# single portfolio number.
 THEMES = {
+    "mena": {
+        "label": "Middle East & North Africa",
+        "blurb": "Gulf producers, the Levant and North Africa.",
+        "partition": True,
+        "countries": [
+            "Saudi Arabia", "Iran", "Iraq", "United Arab Emirates", "Kuwait",
+            "Qatar", "Oman", "Bahrain", "Yemen", "Israel", "Palestine",
+            "Lebanon", "Syria", "Jordan", "Turkey", "Egypt", "Libya",
+            "Algeria", "Tunisia", "Morocco",
+        ],
+    },
+    "eastern_europe": {
+        "label": "Eastern Europe",
+        "blurb": "The Russia/Ukraine theatre and its immediate neighbours.",
+        "partition": True,
+        "countries": ["Ukraine", "Russia", "Belarus", "Moldova"],
+    },
+    "east_asia": {
+        "label": "East & Southeast Asia",
+        "blurb": "Taiwan Strait, Korean peninsula, South China Sea, Myanmar.",
+        "partition": True,
+        "countries": [
+            "China", "Taiwan", "North Korea", "South Korea", "Philippines",
+            "Indonesia", "Myanmar",
+        ],
+    },
+    "south_central_asia": {
+        "label": "South & Central Asia",
+        "blurb": "Afghanistan, Pakistan, India and the Caspian.",
+        "partition": True,
+        "countries": [
+            "Pakistan", "Afghanistan", "India", "Kazakhstan", "Azerbaijan", "Armenia",
+        ],
+    },
+    "sub_saharan": {
+        "label": "Sub-Saharan Africa",
+        "blurb": "Sahel, Horn of Africa, Nigeria and the Congo basin.",
+        "partition": True,
+        "countries": [
+            "Nigeria", "Angola", "Sudan", "Ethiopia", "Somalia", "Mali",
+            "Niger", "Burkina Faso", "Chad", "Democratic Republic of Congo",
+            "Mozambique",
+        ],
+    },
+    "latin_america": {
+        "label": "Latin America",
+        "blurb": "Mexico, the Andes and Brazil.",
+        "partition": True,
+        "countries": ["Mexico", "Colombia", "Brazil", "Venezuela"],
+    },
+
+    # --- overlays: displayed, never summed ---
     "oil_supply": {
         "label": "Oil supply",
-        "blurb": "Producers and chokepoints whose disruption feeds through to crude.",
+        "blurb": "Producers and chokepoints, cutting across regions.",
+        "partition": False,
         "countries": [
             "Saudi Arabia", "Iran", "Iraq", "United Arab Emirates", "Kuwait",
             "Qatar", "Oman", "Libya", "Algeria", "Nigeria", "Venezuela",
             "Kazakhstan", "Angola", "Yemen",
         ],
     },
-    "eastern_europe": {
-        "label": "Eastern Europe",
-        "blurb": "Russia/Ukraine theatre and its immediate neighbours.",
-        "countries": ["Ukraine", "Russia", "Belarus", "Moldova"],
-    },
-    "mena": {
-        "label": "Middle East & North Africa",
-        "blurb": "Levant and Gulf political violence, broadly defined.",
-        "countries": [
-            "Israel", "Palestine", "Lebanon", "Syria", "Egypt", "Jordan",
-            "Turkey", "Iran", "Iraq", "Yemen",
-        ],
-    },
-    "east_asia": {
-        "label": "East Asia",
-        "blurb": "Taiwan Strait, Korean peninsula, South China Sea.",
-        "countries": ["China", "Taiwan", "North Korea", "South Korea", "Philippines"],
-    },
     "global": {
         "label": "Global",
         "blurb": "Every country in the universe, aggregated.",
+        "partition": False,
         "countries": list(COUNTRIES),
     },
 }
 
-# "Yemen" sits in oil_supply for the Red Sea / Bab el-Mandeb channel even though
-# its own production is negligible.
-if "Yemen" not in COUNTRIES:
-    COUNTRIES.append("Yemen")
+PARTITION_THEMES = [t for t, m in THEMES.items() if m["partition"]]
+OVERLAY_THEMES = [t for t, m in THEMES.items() if not m["partition"]]
 
 TICKERS = {
     "VOO": {"label": "Vanguard S&P 500", "group": "broad"},

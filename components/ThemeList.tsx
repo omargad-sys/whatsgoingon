@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 
 import Sparkline from "./Sparkline";
-import { THEME_COLOR_VAR, THEMES, THEME_ORDER } from "@/lib/themes";
+import { PARTITION_THEMES, THEME_COLOR_VAR, THEMES, THEME_ORDER } from "@/lib/themes";
 import { lastMonths, themeSeries } from "@/lib/intensity";
 import { describeShock, monthLabel } from "@/lib/format";
 import type { CountryMonthly, ThemeId } from "@/lib/types";
@@ -37,14 +37,24 @@ export default function ThemeList({ panel, currentShock, selected, onSelect }: P
 
   return (
     <div>
-      {THEME_ORDER.map((t) => {
+      {THEME_ORDER.map((t, i) => {
         const meta = THEMES[t];
         const z = currentShock[t];
         const s = series?.[t];
+        // The list is ordered partition first, overlays last. The caption marks
+        // the boundary so nobody reads an overlay as another region.
+        const firstOverlay =
+          i > 0 && !PARTITION_THEMES.includes(t) && PARTITION_THEMES.includes(THEME_ORDER[i - 1]);
 
         return (
+          <Fragment key={t}>
+          {firstOverlay && (
+            <p className="theme-group-note">
+              Cross-cutting views. Shown on their own, never added to the regions
+              above, because they share countries with them.
+            </p>
+          )}
           <button
-            key={t}
             type="button"
             className="theme-row"
             aria-pressed={selected === t}
@@ -75,6 +85,7 @@ export default function ThemeList({ panel, currentShock, selected, onSelect }: P
               )}
             </span>
           </button>
+          </Fragment>
         );
       })}
 

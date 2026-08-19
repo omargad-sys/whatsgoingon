@@ -6,44 +6,65 @@ import type { ThemeId } from "./types";
  * guards the Python side; `npm run check` guards that the artifact only
  * contains theme ids that appear below.
  */
-export const THEME_ORDER: ThemeId[] = [
-  "oil_supply",
-  "eastern_europe",
-  "mena",
-  "east_asia",
-  "global",
-];
+export const THEME_ORDER: ThemeId[] = ["mena", "eastern_europe", "east_asia", "south_central_asia", "sub_saharan", "latin_america", "oil_supply", "global"] as ThemeId[];
 
-export const THEMES: Record<ThemeId, { label: string; blurb: string; countries: string[] }> = {
-  oil_supply: {
-    label: "Oil supply",
-    blurb: "Producers and chokepoints whose disruption feeds through to crude.",
-    countries: [
-      "Saudi Arabia", "Iran", "Iraq", "United Arab Emirates", "Kuwait", "Qatar",
-      "Oman", "Libya", "Algeria", "Nigeria", "Venezuela", "Kazakhstan", "Angola", "Yemen",
-    ],
+/**
+ * Partition themes are disjoint and cover the whole universe, so their effects
+ * can be summed. Overlay themes cut across regions and are displayed but never
+ * added to a total, or a country would be counted twice.
+ */
+export const PARTITION_THEMES: ThemeId[] = ["mena", "eastern_europe", "east_asia", "south_central_asia", "sub_saharan", "latin_america"] as ThemeId[];
+
+export const THEMES: Record<
+  ThemeId,
+  { label: string; blurb: string; partition: boolean; countries: string[] }
+> = {
+  mena: {
+    label: "Middle East & North Africa",
+    blurb: "Gulf producers, the Levant and North Africa.",
+    partition: true,
+    countries: ["Saudi Arabia", "Iran", "Iraq", "United Arab Emirates", "Kuwait", "Qatar", "Oman", "Bahrain", "Yemen", "Israel", "Palestine", "Lebanon", "Syria", "Jordan", "Turkey", "Egypt", "Libya", "Algeria", "Tunisia", "Morocco"],
   },
   eastern_europe: {
     label: "Eastern Europe",
-    blurb: "Russia/Ukraine theatre and its immediate neighbours.",
+    blurb: "The Russia/Ukraine theatre and its immediate neighbours.",
+    partition: true,
     countries: ["Ukraine", "Russia", "Belarus", "Moldova"],
   },
-  mena: {
-    label: "Middle East & North Africa",
-    blurb: "Levant and Gulf political violence, broadly defined.",
-    countries: [
-      "Israel", "Palestine", "Lebanon", "Syria", "Egypt", "Jordan",
-      "Turkey", "Iran", "Iraq", "Yemen",
-    ],
-  },
   east_asia: {
-    label: "East Asia",
-    blurb: "Taiwan Strait, Korean peninsula, South China Sea.",
-    countries: ["China", "Taiwan", "North Korea", "South Korea", "Philippines"],
+    label: "East & Southeast Asia",
+    blurb: "Taiwan Strait, Korean peninsula, South China Sea, Myanmar.",
+    partition: true,
+    countries: ["China", "Taiwan", "North Korea", "South Korea", "Philippines", "Indonesia", "Myanmar"],
+  },
+  south_central_asia: {
+    label: "South & Central Asia",
+    blurb: "Afghanistan, Pakistan, India and the Caspian.",
+    partition: true,
+    countries: ["Pakistan", "Afghanistan", "India", "Kazakhstan", "Azerbaijan", "Armenia"],
+  },
+  sub_saharan: {
+    label: "Sub-Saharan Africa",
+    blurb: "Sahel, Horn of Africa, Nigeria and the Congo basin.",
+    partition: true,
+    countries: ["Nigeria", "Angola", "Sudan", "Ethiopia", "Somalia", "Mali", "Niger", "Burkina Faso", "Chad", "Democratic Republic of Congo", "Mozambique"],
+  },
+  latin_america: {
+    label: "Latin America",
+    blurb: "Mexico, the Andes and Brazil.",
+    partition: true,
+    countries: ["Mexico", "Colombia", "Brazil", "Venezuela"],
+  },
+  oil_supply: {
+    label: "Oil supply",
+    blurb: "Producers and chokepoints, cutting across regions.",
+    partition: false,
+    countries: ["Saudi Arabia", "Iran", "Iraq", "United Arab Emirates", "Kuwait", "Qatar", "Oman", "Libya", "Algeria", "Nigeria", "Venezuela", "Kazakhstan", "Angola", "Yemen"],
   },
   global: {
     label: "Global",
     blurb: "Every country in the universe, aggregated.",
+    partition: false,
     countries: [],
   },
 };
@@ -65,11 +86,14 @@ export const TICKER_LIST = Object.keys(TICKERS);
 
 /** Categorical slots in fixed order. Never cycled: a 6th theme is not a hue. */
 export const THEME_COLOR_VAR: Record<ThemeId, string> = {
-  oil_supply: "var(--series-1)",
+  mena: "var(--series-1)",
   eastern_europe: "var(--series-2)",
-  mena: "var(--series-3)",
-  east_asia: "var(--series-4)",
-  global: "var(--series-5)",
+  east_asia: "var(--series-3)",
+  south_central_asia: "var(--series-4)",
+  sub_saharan: "var(--series-5)",
+  latin_america: "var(--series-6)",
+  oil_supply: "var(--series-7)",
+  global: "var(--series-8)",
 };
 
 /** Severity bands for individual events. Status colors, always with a label. */
