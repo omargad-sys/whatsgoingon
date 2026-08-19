@@ -79,10 +79,13 @@ function filterEvents(
 
 /** Build the popup with DOM nodes rather than an HTML string: the text comes
  *  from a third-party feed and must never be parsed as markup. */
-function popupNode(p: Record<string, unknown>, mode: Mode): HTMLElement {
+function popupNode(p: Record<string, unknown>): HTMLElement {
   const root = document.createElement("div");
   root.style.font = "13px/1.45 system-ui, -apple-system, sans-serif";
-  root.style.color = INK[mode];
+  // Inherit from the styled popup shell rather than hardcoding a colour. Setting
+  // white text here while maplibre painted the shell white is what made every
+  // popup render as a blank box.
+  root.style.color = "inherit";
   root.style.maxWidth = "230px";
 
   const title = document.createElement("div");
@@ -272,10 +275,21 @@ export default function ConflictMap({ heat, events, filters, mode, focus }: Prop
         const f = e.features?.[0];
         if (!f) return;
         popup.current?.remove();
-        popup.current = new maplibregl.Popup({ closeButton: true, maxWidth: "260px" })
+        const created = new maplibregl.Popup({ closeButton: true, maxWidth: "260px" })
           .setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number])
-          .setDOMContent(popupNode(f.properties as Record<string, unknown>, mode))
+          .setDOMContent(popupNode(f.properties as Record<string, unknown>))
           .addTo(instance);
+        popup.current = created;
+
+        // Belt and braces: force the two properties that decide whether the
+        // popup is readable at all, so it survives any stylesheet ordering.
+        const shell = created
+          .getElement()
+          ?.querySelector(".maplibregl-popup-content") as HTMLElement | null;
+        if (shell) {
+          shell.style.setProperty("background", SURFACE[mode], "important");
+          shell.style.setProperty("color", INK[mode], "important");
+        }
       });
     });
 
