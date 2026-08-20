@@ -24,7 +24,13 @@ import {
 } from "@/lib/chain";
 import { SEVERITY_BANDS, THEMES, THEME_ORDER, TICKER_LIST } from "@/lib/themes";
 import { HEAT_RAMP } from "@/lib/mapTheme";
-import { dataLag, decodeHoldings, encodeHoldings, relativeAge } from "@/lib/format";
+import {
+  dataLag,
+  decodeHoldings,
+  encodeHoldings,
+  monthIsPast,
+  relativeAge,
+} from "@/lib/format";
 import type {
   CountryMonthly,
   EventCollection,
@@ -238,6 +244,23 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
   // away on its own if the account is ever moved to a weekly ACLED tier.
   const lag = useMemo(() => dataLag(manifest.acled.last_week), [manifest]);
 
+  // Three states, not two. "No dots on the map" has to distinguish between
+  // still-fetching, failed, and genuinely empty, or the map quietly reads as
+  // "nothing is happening anywhere".
+  // The chain always targets the month after the data ends. Under a twelve-month
+  // embargo that month is already over, so the page must not speak about it in
+  // the future tense.
+  const targetIsPast = useMemo(
+    () => monthIsPast(forecast.target_month),
+    [forecast.target_month],
+  );
+
+  const dataState: "loading" | "ready" | "error" = loadError
+    ? "error"
+    : heat && events && panel
+      ? "ready"
+      : "loading";
+
   /* ------------------------------------------------------------ render */
 
   return (
@@ -245,9 +268,13 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
       <header className="topbar">
         <div className="brand">
           <h1>What&apos;s Going On</h1>
-          <span className="tag">
+          {/* Two lengths rather than hiding it on phones. The tagline is the only
+              thing telling a first-time visitor what they are looking at, so the
+              narrow screen gets a shorter one, not none. */}
+          <span className="tag tag--long">
             Conflict events from ACLED, overlaid on a portfolio of index and sector ETFs
           </span>
+          <span className="tag tag--short">Conflict events, mapped against your ETFs</span>
         </div>
         <span className="spacer" />
         <nav>
@@ -278,10 +305,9 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
       {!manifest.synthetic && lag?.material && (
         <div className="banner banner--info" role="status">
           <span>
-            <strong>Events through {lag.cutoff}</strong>, which is {lag.phrase} behind
-            today. This is not a live feed: ACLED releases event-level data to research
-            accounts on a delay.{" "}
-            <a href="/methodology#lag">What that means for the numbers</a>
+            <strong>Events through {lag.cutoff}</strong>, {lag.phrase} behind today. This
+            is history, not a live feed.{" "}
+            <a href="/methodology#lag">Why</a>
           </span>
         </div>
       )}
@@ -302,6 +328,7 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
             focus={focus}
             highlight={country}
             probabilities={probabilities}
+            dataState={dataState}
             onPickCountry={(c: string) =>
               onSelectCountry(c, forecast.countries[c]?.centroid ?? null)
             }
@@ -351,7 +378,11 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
               </div>
             ))}
             <div className="legend-row muted" style={{ marginTop: 8, fontSize: 11 }}>
-              {visibleEvents.toLocaleString()} events shown
+              {dataState === "ready"
+                ? `${visibleEvents.toLocaleString()} events shown`
+                : dataState === "loading"
+                  ? "Counting events…"
+                  : "Event count unavailable"}
             </div>
           </div>
 
@@ -389,8 +420,14 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
                 </>
               ) : (
                 <>
-                  Estimated effect on your portfolio during{" "}
+                  {targetIsPast ? "Modelled effect for " : "Estimated effect on your portfolio during "}
                   {forecast.target_month.slice(0, 7)} from conflict escalation risk alone.{" "}
+                  {targetIsPast && (
+                    <>
+                      That month is already over: the chain runs on the newest data this
+                      ACLED tier releases, so its target is in the past.{" "}
+                    </>
+                  )}
                   {portfolio.measured} of {portfolio.total} holdings responded measurably,
                   covering {Math.round(portfolio.covered * 100)}% of your weight. Everything
                   else that moves markets is excluded. Not investment advice.
@@ -405,7 +442,10 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
           </section>
 
           <section className="section">
-            <h2>Escalation forecast · {forecast.target_month.slice(0, 7)}</h2>
+            <h2>
+              {targetIsPast ? "Escalation risk · " : "Escalation forecast · "}
+              {forecast.target_month.slice(0, 7)}
+            </h2>
             {moved.length > 0 && (
               <p className="whatchanged">
                 <span className="muted">

@@ -22,7 +22,7 @@ import {
 import { buildLookup } from "./exposure";
 import { PARTITION_THEMES, THEMES } from "./themes";
 import type { Forecast, Link, Sensitivities, ThemeId } from "./types";
-import { dataLag } from "./format";
+import { dataLag, monthIsPast } from "./format";
 
 const ALL = ["Iran", "Iraq", "Saudi Arabia", "Ukraine", "Russia"];
 
@@ -419,4 +419,28 @@ test("a build with no recorded coverage window reports nothing rather than zero"
   // missing value must never be allowed to claim.
   expect(dataLag(null)).toBeNull();
   expect(dataLag("not a date")).toBeNull();
+});
+
+test("the page's tense follows the data, not the model's vocabulary", () => {
+  const now = new Date();
+  const ym = (offsetMonths: number) => {
+    const d = new Date(now.getFullYear(), now.getMonth() + offsetMonths, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  };
+
+  // Under the 12-month embargo the forecast targets a month that is already
+  // over, so calling it a forecast for that month is a lie about tense.
+  expect(monthIsPast(ym(-11))).toBe(true);
+  expect(monthIsPast(ym(-1))).toBe(true);
+
+  // The current month is not past: the month the forecast targets on a weekly
+  // tier must not be described in the past tense either.
+  expect(monthIsPast(ym(0))).toBe(false);
+  expect(monthIsPast(ym(1))).toBe(false);
+
+  // Full dates are accepted, since artifacts carry both shapes.
+  expect(monthIsPast(`${ym(-2)}-01`)).toBe(true);
+
+  expect(monthIsPast(null)).toBe(false);
+  expect(monthIsPast("garbage")).toBe(false);
 });

@@ -8,7 +8,7 @@ import { THEMES, THEME_ORDER, TICKERS } from "@/lib/themes";
 import type { Forecast, Link as LinkModel, Manifest, Sensitivities } from "@/lib/types";
 
 export const metadata = {
-  title: "Methodology — What's Going On",
+  title: "Methodology · What's Going On",
 };
 
 const sens = sensitivities as unknown as Sensitivities;
@@ -279,7 +279,7 @@ z     = (shock − rolling_mean(shock, 36)) / rolling_std(shock, 36)`}</code>
       <ul>
         {THEME_ORDER.map((t) => (
           <li key={t}>
-            <strong>{THEMES[t].label}</strong> — {THEMES[t].blurb}
+            <strong>{THEMES[t].label}</strong> · {THEMES[t].blurb}
             {THEMES[t].countries.length > 0 && (
               <span className="muted"> ({THEMES[t].countries.join(", ")})</span>
             )}

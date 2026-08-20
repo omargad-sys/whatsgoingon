@@ -37,6 +37,15 @@ interface Props {
   /** country -> escalation probability, shown on hover. */
   probabilities?: Record<string, number>;
   onPickCountry?: (country: string) => void;
+  /**
+   * Whether the artifacts behind the map have arrived.
+   *
+   * Without this the map draws a basemap with no dots on it in three different
+   * situations that mean completely different things: still loading, failed to
+   * load, and genuinely no events in the selected window. An empty map that
+   * does not say which one it is, is a map that lies by omission.
+   */
+  dataState?: "loading" | "ready" | "error";
 }
 
 type PointCollection = {
@@ -132,6 +141,7 @@ export default function ConflictMap({
   highlight,
   probabilities,
   onPickCountry,
+  dataState = "ready",
 }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
@@ -445,6 +455,24 @@ export default function ConflictMap({
           <div className="muted" style={{ fontSize: 11 }}>
             Click to filter the map to this country
           </div>
+        </div>
+      )}
+
+      {!failure && dataState === "loading" && (
+        <div className="map-status" role="status">
+          <span className="spinner" aria-hidden="true" />
+          <span>Loading conflict events…</span>
+        </div>
+      )}
+
+      {!failure && dataState === "error" && (
+        <div className="map-failure" role="alert">
+          <strong>Event data didn&apos;t load.</strong>
+          <span>The map is drawn but has nothing to plot.</span>
+          <span className="muted">
+            Reloading usually fixes it. The forecast and portfolio panels are built at
+            deploy time and are unaffected.
+          </span>
         </div>
       )}
 

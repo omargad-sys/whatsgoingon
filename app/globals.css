@@ -190,6 +190,10 @@ select {
   text-overflow: ellipsis;
 }
 
+.brand .tag--short {
+  display: none;
+}
+
 .topbar .spacer {
   flex: 1;
 }
@@ -811,6 +815,13 @@ table.data th.num {
     gap: 5px;
   }
 
+  /* The event count is not a severity band. On the wrapped mobile legend it
+     ended up sitting inline beside "No deaths recorded" and read as one. */
+  .map-overlay.legend .legend-row.muted {
+    flex: 0 0 100%;
+    margin-top: 2px;
+  }
+
   /* 44px is the usual minimum comfortable touch target. */
   .pill {
     padding: 9px 12px;
@@ -827,8 +838,26 @@ table.data th.num {
     padding: 9px 8px;
   }
 
-  .brand .tag {
+  /* Swap the tagline for the short one rather than dropping it: on a phone this
+     is the only sentence explaining what the page is. */
+  .brand .tag--long {
     display: none;
+  }
+
+  .brand .tag--short {
+    display: inline;
+    white-space: normal;
+  }
+
+  .brand {
+    flex-wrap: wrap;
+    gap: 2px 8px;
+  }
+
+  /* Multi-line banner text should hang from the top, not sit centred against a
+     four-line block. */
+  .banner {
+    align-items: flex-start;
   }
 
   .headline {
@@ -939,7 +968,13 @@ table.data th.num {
   transform: translate(-50%, -50%);
   display: grid;
   gap: 6px;
-  max-width: 340px;
+  /* An absolutely positioned box with only `left` set is shrink-to-fit against
+     the space from `left` to the container's right edge. At left:50% that is
+     half the map, so on a phone this panel was squeezed into ~188px and wrapped
+     into a tall ragged column. `width: max-content` opts out of that constraint
+     and the max-width caps it again. */
+  width: max-content;
+  max-width: min(340px, calc(100% - 24px));
   padding: 14px 16px;
   border: 1px solid var(--border-strong);
   border-left: 3px solid var(--status-warning);
@@ -949,6 +984,52 @@ table.data th.num {
   text-align: left;
 }
 
+/* Quieter than .map-failure: this is a normal moment in the page's life, not a
+   fault, so it gets no warning rule and no alarm colour. */
+.map-status {
+  position: absolute;
+  z-index: 6;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* Same shrink-to-fit trap as .map-failure. Without this the pill wrapped to
+     two lines on a phone, which on a rounded pill looks like a bug. */
+  width: max-content;
+  max-width: calc(100% - 24px);
+  padding: 9px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+
+.spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--series-1);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Respect the OS setting. A spinner is decorative; a person who has asked for
+   less motion should get a static ring, not a rotating one. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-top-color: var(--border-strong);
+  }
+}
 
 /* ------------------------------------------------------------------ popups */
 

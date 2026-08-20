@@ -112,3 +112,23 @@ export function dataLag(lastWeek: string | null): DataLag | null {
 
   return { cutoff: lastWeek, days, material: days >= 45, phrase };
 }
+
+/**
+ * Is this YYYY-MM (or YYYY-MM-DD) month already over?
+ *
+ * The forecast targets the month after the data ends. With a twelve-month data
+ * embargo that target month is in the past, so every future-tense phrasing on
+ * the page ("effect on your portfolio during 2025-09") reads as a prediction
+ * about something that has already happened. The tense has to follow the data,
+ * not the model's vocabulary.
+ */
+export function monthIsPast(ym: string | null | undefined): boolean {
+  if (!ym) return false;
+  const m = /^(\d{4})-(\d{2})/.exec(ym);
+  if (!m) return false;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const now = new Date();
+  const nowKey = now.getFullYear() * 12 + now.getMonth();
+  return year * 12 + (month - 1) < nowKey;
+}

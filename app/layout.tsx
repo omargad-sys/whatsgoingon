@@ -6,7 +6,7 @@ import manifest from "@/public/data/manifest.json";
 
 const SITE = "https://www.whatsgoingon.vip";
 
-const TITLE = "What's Going On — conflict risk analyzer";
+const TITLE = "What's Going On · conflict risk analyzer";
 const DESCRIPTION =
   "Political violence data from ACLED, chained through an escalation forecast and " +
   "a market sensitivity model to a portfolio of index and sector ETFs. Nothing is " +
