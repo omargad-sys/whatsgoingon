@@ -56,6 +56,11 @@ def main():
     step("sensitivities", ["build_sensitivities.py", *flag])
     step("forecast", ["forecast.py", *flag])
     step("link", ["build_link.py", *flag])
+    # Power analysis after the sensitivities it describes. Skipped on fixture
+    # builds: measuring the detectable effect size of synthetic data would be a
+    # number about the random number generator.
+    if not args.fixture:
+        step("power", ["power.py", "--write"])
     # Last, so the share card reflects everything above it.
     step("share card", ["build_og.py"])
 

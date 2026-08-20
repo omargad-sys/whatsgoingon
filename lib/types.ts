@@ -165,3 +165,25 @@ export interface Link {
   tstat_threshold: number;
   themes: Partial<Record<ThemeId, ThemeLink>>;
 }
+
+/**
+ * Output of research/power.py: how large an effect this design can actually
+ * detect. Optional on purpose. It is fetched at runtime rather than imported
+ * at build time so that a repo without a power run still builds, and the app
+ * degrades to saying less rather than failing.
+ */
+export interface Power {
+  n_months: number;
+  n_pairs: number;
+  n_planted: number;
+  replications: number;
+  tstat_threshold: number;
+  fdr_q: number;
+  false_positive_rate: number;
+  /** basis points of monthly return per 1-sigma shock, null if never reached */
+  mde_tstat_bps: number | null;
+  mde_both_bps: number | null;
+  curve: { bps: number; power_tstat: number; power_both: number }[];
+  reference_effects: { label: string; bps: number; power: number | null }[];
+  reference_source: string;
+}

@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+
 import Link from "next/link";
 
 import forecast from "@/public/data/forecast.json";
@@ -5,7 +8,13 @@ import linkData from "@/public/data/link.json";
 import manifest from "@/public/data/manifest.json";
 import sensitivities from "@/public/data/sensitivities.json";
 import { THEMES, THEME_ORDER, TICKERS } from "@/lib/themes";
-import type { Forecast, Link as LinkModel, Manifest, Sensitivities } from "@/lib/types";
+import type {
+  Forecast,
+  Link as LinkModel,
+  Manifest,
+  Power,
+  Sensitivities,
+} from "@/lib/types";
 
 export const metadata = {
   title: "Methodology · What's Going On",
@@ -15,6 +24,22 @@ const sens = sensitivities as unknown as Sensitivities;
 const man = manifest as unknown as Manifest;
 const fc = forecast as unknown as Forecast;
 const link = linkData as unknown as LinkModel;
+
+/**
+ * Read at build time rather than imported, so a checkout without a power run
+ * still builds. A static import of a missing JSON file is a build error; this
+ * degrades to a page that says less.
+ */
+function loadPower(): Power | null {
+  try {
+    const file = path.join(process.cwd(), "public", "data", "power.json");
+    return JSON.parse(fs.readFileSync(file, "utf8")) as Power;
+  } catch {
+    return null;
+  }
+}
+
+const power = loadPower();
 
 export default function Methodology() {
   const significant = sens.pairs.filter((p) => p.significant);
@@ -339,9 +364,89 @@ z     = (shock − rolling_mean(shock, 36)) / rolling_std(shock, 36)`}</code>
       <div className="callout">
         <strong>&ldquo;Not identified&rdquo; is not &ldquo;zero&rdquo;.</strong> A blank
         cell means the data could not distinguish the relationship from noise at this
-        sample size. The effect may be real and simply too small or too rare to measure
-        with ~{sens.pairs[0]?.n ?? 0} monthly observations.
+        sample size. The effect may be real and simply too small to measure with ~
+        {sens.pairs[0]?.n ?? 0} monthly observations. The next section quantifies exactly
+        how small &ldquo;too small&rdquo; is, rather than leaving it as a hedge.
       </div>
+
+      <h2 id="power">How small an effect could this design see?</h2>
+      <p>
+        &ldquo;Nothing was significant&rdquo; is not a result on its own. It is a result
+        only if the test could have found something had it been there. So the same
+        regression and the same two gates were run against simulated data with an effect
+        of known size planted in it, using the real fitted coefficients and a block
+        bootstrap of the real residuals, so the volatility and serial dependence that
+        Newey-West responds to are preserved rather than replaced with tidy noise.
+      </p>
+      {power ? (
+        <>
+          <p>
+            With {power.n_months} months and {power.n_pairs} simultaneous hypotheses, the
+            smallest effect this design detects 80% of the time is{" "}
+            <strong>
+              {power.mde_both_bps === null
+                ? "beyond the range tested"
+                : `${(power.mde_both_bps / 100).toFixed(1)}% of monthly return per 1σ shock`}
+            </strong>
+            . Under the |t| gate alone, before any multiplicity correction, it is{" "}
+            {power.mde_tstat_bps === null
+              ? "still beyond it"
+              : `${(power.mde_tstat_bps / 100).toFixed(1)}%`}
+            .
+          </p>
+          <table className="data" style={{ marginTop: 8 }}>
+            <thead>
+              <tr>
+                <th scope="col">If the true effect were</th>
+                <th scope="col" className="num">
+                  Chance of finding it
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {power.reference_effects.map((r) => (
+                <tr key={r.label}>
+                  <td>
+                    {(r.bps / 100).toFixed(2)}% per 1σ
+                    <span className="muted"> · {r.label}</span>
+                  </td>
+                  <td className="num">
+                    {r.power === null ? "-" : `${Math.round(r.power * 100)}%`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="muted" style={{ fontSize: 12 }}>
+            Reference magnitudes from the {power.reference_source}. Simulated over{" "}
+            {power.replications} replications per effect size. Under a true null the two
+            gates together fire {(power.false_positive_rate * 100).toFixed(1)}% of the
+            time, which is the false discovery rate behaving as designed.
+          </p>
+          <div className="callout">
+            <strong>So the blank overlay is a statement about this test.</strong> The
+            effects that published work actually reports are a fraction of what this
+            design can resolve, so finding nothing was the likely outcome whether or not
+            conflict moves these funds. Reporting it as &ldquo;conflict does not affect
+            your portfolio&rdquo; would be asserting a null the data cannot support. Two
+            things cause it: only {power.n_months} usable months after the rolling
+            z-score consumes the start of the panel, and {power.n_pairs} simultaneous
+            tests, which pushes the Benjamini-Hochberg threshold for the best pair down
+            to roughly p ≤ {(power.fdr_q / power.n_pairs).toFixed(5)}.
+          </div>
+          <p>
+            The comparison is generous to this design, too. The published figures measure
+            news-based geopolitical risk indices, which spike exactly when markets are
+            paying attention. The regressor here is a 1σ move in ACLED event counts
+            within a region, a considerably weaker market signal, so the true effect for
+            this variable is probably smaller still.
+          </p>
+        </>
+      ) : (
+        <p className="muted">
+          No power analysis in this build. Run <code>python research/power.py --write</code>.
+        </p>
+      )}
 
       <h2>What survived</h2>
       {significant.length === 0 ? (

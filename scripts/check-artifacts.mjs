@@ -248,6 +248,37 @@ if (lk) {
   }
 }
 
+/* ----------------------------------------------------------------- power */
+
+// Optional: only produced by non-fixture builds. Its absence is fine, but a
+// malformed one is not, because the methodology page renders these numbers as
+// the reason the overlay is empty.
+{
+  const file = join(dir, "power.json");
+  if (existsSync(file)) {
+    const power = load("power.json");
+    for (const k of ["n_months", "n_pairs", "replications", "false_positive_rate"]) {
+      if (!isFiniteNum(power?.[k])) fail(`power: ${k} missing or not a number`);
+    }
+    if (!Array.isArray(power.curve) || power.curve.length === 0) fail("power: no curve");
+    else {
+      const zero = power.curve.find((p) => p.bps === 0);
+      if (!zero) fail("power: curve has no zero-effect row, so the false positive rate is unverifiable");
+      // A design whose gates fire on pure noise more often than the nominal FDR
+      // is not conservative, and the whole credibility argument rests on it.
+      else if (zero.power_both > 3 * power.fdr_q) {
+        fail(`power: gates fire ${(zero.power_both * 100).toFixed(1)}% of the time under a true null`);
+      }
+      let prev = -1;
+      for (const row of power.curve) {
+        if (!isFiniteNum(row.bps) || !isFiniteNum(row.power_both)) fail("power: malformed curve row");
+        if (row.bps <= prev) fail("power: curve is not sorted by effect size");
+        prev = row.bps;
+      }
+    }
+  }
+}
+
 /* -------------------------------------------------------------- og image */
 const ogPath = join(root, "public", "og.png");
 if (!existsSync(ogPath)) {

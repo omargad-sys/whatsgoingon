@@ -94,9 +94,14 @@ export default function HoldingsImpact({ outlooks, month }: Props) {
               </div>
             ) : (
               <div className="holding-why muted">
+                {/* Wording matters more here than anywhere else on the page.
+                    "No effect" and "not detected" are different claims, and the
+                    power analysis says this design could not have detected an
+                    effect of the size the literature actually reports. Saying
+                    the first would be asserting a null the data cannot support. */}
                 {o.blocked === "no-link"
-                  ? "Conflict in these regions has no measurable effect on regional intensity, so nothing reaches this holding."
-                  : "This holding has no statistically identified response to any region. Broad index funds usually do not."}
+                  ? "No identified link between escalation and this region's conflict intensity, so nothing reaches this holding."
+                  : "No response large enough for this design to detect. That is not the same as no response: see how small an effect it can see."}
               </div>
             )}
 

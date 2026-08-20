@@ -38,6 +38,7 @@ import type {
   Holding,
   Link,
   Manifest,
+  Power,
   Sensitivities,
   ThemeId,
   WorldHeat,
@@ -81,6 +82,7 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
   const [events, setEvents] = useState<EventCollection | null>(null);
   const [panel, setPanel] = useState<CountryMonthly | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [power, setPower] = useState<Power | null>(null);
 
   const [holdings, setHoldings] = useState<Holding[]>(
     () => decodeHoldings(params.get("p"), TICKER_LIST) ?? DEFAULT_HOLDINGS,
@@ -121,6 +123,13 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
         setWeek(Math.max(0, h.weeks.length - 1));
       })
       .catch((err: Error) => !cancelled && setLoadError(err.message));
+
+    // Fetched separately and allowed to fail. The power artifact only exists
+    // after research/power.py has been run, and a repo without it should still
+    // render a working page rather than a load error.
+    grab<Power>("/data/power.json")
+      .then((p) => !cancelled && setPower(p))
+      .catch(() => undefined);
 
     return () => {
       cancelled = true;
@@ -403,7 +412,7 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
             <div className="headline">
               {portfolio.measured === 0 ? (
                 <span className="null-note" style={{ fontSize: 17 }}>
-                  Nothing measurable
+                  Below detection
                 </span>
               ) : (
                 <span className={portfolio.value >= 0 ? "up" : "down"}>
@@ -415,8 +424,15 @@ export default function Dashboard({ sensitivities, manifest, forecast, link }: P
             <p className="hint" style={{ marginBottom: 0 }}>
               {portfolio.measured === 0 ? (
                 <>
-                  None of your holdings has a measurable response to conflict in these
-                  regions. That is a real finding, not a gap.
+                  No holding has a response large enough for this design to detect.
+                  That is a statement about the test, not about markets: with{" "}
+                  {power ? `${power.n_months} months and ${power.n_pairs} hypotheses` : "this sample"}
+                  , the smallest effect it could reliably find is{" "}
+                  {power?.mde_both_bps
+                    ? `${(power.mde_both_bps / 100).toFixed(1)}% per 1-sigma shock`
+                    : "far larger than published estimates"}
+                  , and published estimates are a fraction of that.{" "}
+                  <a href="/methodology#power">How small an effect it can see</a>
                 </>
               ) : (
                 <>

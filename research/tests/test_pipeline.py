@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from aggregate import fill_missing_months, to_monthly  # noqa: E402
@@ -464,3 +465,70 @@ class TestCoverageProbe(unittest.TestCase):
     def test_returns_none_when_the_account_sees_nothing(self):
         fe = self._install_fake_api(pd.Timestamp("1990-01-01"))
         self.assertIsNone(fe.latest_event_date("token", "Ukraine", months_back=6))
+
+
+class TestImportChecker(unittest.TestCase):
+    """The CI gate that decides whether a build is allowed to spend API calls.
+
+    It was a regex over raw file text, so any line beginning with the word
+    "from" or "import" counted as an import. A docstring sentence reading
+    "from every theme it belongs to" was reported as a missing package named
+    `every`, and would have failed the workflow over prose.
+    """
+
+    @staticmethod
+    def _checker():
+        import importlib.util as iu
+
+        path = ROOT / "scripts" / "check-imports.py"
+        spec = iu.spec_from_file_location("check_imports", path)
+        mod = iu.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_prose_and_strings_are_not_imports(self):
+        mod = self._checker()
+        source = '\n'.join([
+            '"""A docstring about code.',
+            '',
+            'from every theme it belongs to, and from the forecast',
+            'import of raw events is not permitted under the licence',
+            '"""',
+            '# import notarealpackage',
+            'S = "from alsonotreal import thing"',
+            'import json',
+        ])
+        found = set(mod.imported_modules(source))
+        self.assertEqual(found, {"json"}, f"parsed prose as imports: {found}")
+
+    def test_finds_imports_the_regex_would_have_too(self):
+        mod = self._checker()
+        source = '\n'.join([
+            'def go():',
+            '    import pandas as pd',
+            '    from scipy import stats',
+            '    return pd, stats',
+            '',
+            'try:',
+            '    import xgboost',
+            'except ImportError:',
+            '    xgboost = None',
+            '',
+            'import os.path',
+            'from concurrent.futures import ThreadPoolExecutor',
+        ])
+        found = set(mod.imported_modules(source))
+        self.assertEqual(found, {"pandas", "scipy", "xgboost", "os", "concurrent"})
+
+    def test_relative_imports_are_not_packages(self):
+        mod = self._checker()
+        found = set(mod.imported_modules("from . import paths\nfrom .geo import centroid\n"))
+        self.assertEqual(found, set())
+
+    def test_every_research_module_is_covered(self):
+        """The real check, run against the real tree."""
+        mod = self._checker()
+        count, missing = mod.scan(ROOT / "research")
+        hard = [m for m in missing if not m[2]]
+        self.assertEqual(hard, [], f"missing non-optional packages: {hard}")
+        self.assertGreater(count, 0)
