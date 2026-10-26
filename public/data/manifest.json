@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-10-19T13:20:27+00:00",
+  "generated_at": "2026-10-26T13:08:51+00:00",
   "synthetic": false,
   "window_days": 180,
   "acled": {
     "weeks": 26,
-    "first_week": "2025-04-21",
-    "last_week": "2025-10-13",
-    "grid_cells": 41663,
+    "first_week": "2025-04-28",
+    "last_week": "2025-10-20",
+    "grid_cells": 41457,
     "detail_events": 2990,
     "panel_months": 93,
     "panel_countries": 52
@@ -25,7 +25,7 @@
       "XLE"
     ],
     "first_date": "2017-06-01",
-    "last_date": "2026-10-16"
+    "last_date": "2026-10-23"
   },
   "forecast": {
     "as_of_month": "2025-09-01",
